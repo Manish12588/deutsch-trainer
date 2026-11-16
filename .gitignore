@@ -1,0 +1,39 @@
+# ---------- HIDE (not pushed to GitHub) ----------
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE settings
+.vscode/
+.idea/
+*.swp
+
+# Secrets and local settings (never commit these)
+.env
+.env.*
+*.pem
+*.key
+serviceAccount*.json
+
+# Firebase CLI local files (only matter if you ever use `firebase deploy`)
+.firebase/
+firebase-debug.log*
+.firebaserc
+
+# Logs and dependencies
+*.log
+node_modules/
+
+# Local backups, exports and scratch files
+*.zip
+deutsch-users*.csv
+*.bak
+*.tmp
+scratch/
+
+# ---------- SHOW (pushed to GitHub) ----------
+# Everything else: index.html, css/, js/, firestore.rules, README.md, .nojekyll.
+# js/firebase-config.js IS meant to be public (Firebase web keys are not secrets;
+# your Firestore rules protect the data), so it stays tracked.

@@ -1,0 +1,21 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // The admin is identified by a VERIFIED email address.
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower() == 'manish.kumar.sdet@gmail.com';
+    }
+
+    match /users/{uid} {
+      allow read: if request.auth != null && (request.auth.uid == uid || isAdmin());
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.email.lower() == request.auth.token.email.lower();
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
+    match /{document=**} { allow read, write: if false; }
+  }
+}
