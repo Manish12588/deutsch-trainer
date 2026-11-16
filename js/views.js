@@ -40,7 +40,6 @@ function viewAuth(){
     <button id="abtn" class="btn wide" onclick="doAuth()">${{login:"Log in",register:"Create account",reset:"Send reset link"}[m]}</button>
     ${m === "login" ? `<p class="center" style="margin-bottom:0"><a href="#" onclick="${sw("reset")};return false">Forgot password?</a></p>` : ""}
     ${m === "reset" ? `<p class="center" style="margin-bottom:0"><a href="#" onclick="${sw("login")};return false">← Back to log in</a></p>` : ""}
-    ${m === "register" ? `<p class="tiny muted center" style="margin-top:14px;margin-bottom:0">Your name, email and learning progress are stored in Firebase. The course admin (Manish) can see them.</p>` : ""}
   </div></div>`;
 }
 
