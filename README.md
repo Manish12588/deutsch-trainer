@@ -17,6 +17,7 @@ Created by **Manish Kumar** · [LinkedIn](https://www.linkedin.com/in/manish-kum
 - **Test** – one question per word: nouns ask for the article (der/die/das), verbs ask for the
   ich/du/er form. Pass mark 80 %. Day N unlocks only after Day N−1 is passed
 - **Practice** – meanings, plurals and a mixed review of older words plus your mistakes
+- **Grammar** – possessive articles (mein, dein, sein…): 200 sentences, choose 10 / 15 / 20 random questions per test, new sentences first, explanation for every wrong answer
 - **Progress** – XP, levels, streak, badges, per-day results, export/import of your progress
 - **Accounts** – email + password, email verification, password reset by email
 - **Admin view** – registered users and everyone's progress (admin only), CSV export
@@ -43,6 +44,7 @@ Browser (static files on GitHub Pages)
 index.html              page shell, loads the files below in order
 css/style.css           themes (light/dark), layout, components
 js/words.js             the 30 days of words (edit here to change content)
+js/possessives.js       200 practice sentences for the Grammar tab (possessive articles)
 js/firebase-config.js   Firebase keys, admin email, Firebase loader
 js/state.js             app state, helpers, quiz logic, XP/streak
 js/auth.js              login, register, password reset, saving progress

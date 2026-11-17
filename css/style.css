@@ -123,3 +123,8 @@ label{display:block;margin:12px 0 6px;font-size:13px;color:var(--muted)}
 @keyframes sp{to{transform:rotate(360deg)}}
 #confetti{position:fixed;inset:0;pointer-events:none;display:none;z-index:50}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.gt{width:100%;border-collapse:collapse;font-size:15px}
+.gt th{font-size:12px;font-weight:600;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+.gt td{padding:7px 8px;border-bottom:1px solid var(--line)}.gt td:first-child{color:var(--muted)}
+.blank{display:inline-block;min-width:64px;border-bottom:2px solid var(--accent);margin:0 2px;color:transparent;user-select:none}

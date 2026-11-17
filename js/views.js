@@ -45,7 +45,7 @@ function viewAuth(){
 
 function viewApp(){
   const t = ui.tab, adm = isAdminEmail();
-  const body = quiz ? viewQuiz() : t === "learn" ? viewLearn() : t === "check" ? viewCheck() : t === "admin" ? viewAdmin() : viewProgress();
+  const body = quiz ? viewQuiz() : t === "learn" ? viewLearn() : t === "check" ? viewCheck() : t === "grammar" ? viewGrammar() : t === "admin" ? viewAdmin() : viewProgress();
   const verify = me.emailVerified ? "" : `<div class="glass banner">📧 Please verify your email address – we sent you a link.
     <div class="row" style="margin-top:8px"><button class="btn alt" onclick="resendVerify()">Resend email</button><button class="btn alt" onclick="refreshVerified()">I've verified</button></div></div>`;
   return `<div class="wrap">
@@ -55,9 +55,10 @@ function viewApp(){
         <span class="chip btnlike" onclick="logout()" title="Log out">${esc(dispName())} · Log out</span></div>
     </div>
     ${verify}
-    <div class="glass tabs" style="grid-template-columns:repeat(${adm?4:3},1fr)">
+    <div class="glass tabs" style="grid-template-columns:repeat(${adm?5:4},1fr)">
       <button class="tab ${t==="learn"?"on":""}" onclick="setTab('learn')">Learn</button>
       <button class="tab ${t==="check"?"on":""}" onclick="setTab('check')">Test</button>
+      <button class="tab ${t==="grammar"?"on":""}" onclick="setTab('grammar')">Grammar</button>
       <button class="tab ${t==="progress"?"on":""}" onclick="setTab('progress')">Progress</button>
       ${adm ? `<button class="tab ${t==="admin"?"on":""}" onclick="setTab('admin')">Admin</button>` : ""}
     </div>${body}</div>`;
@@ -173,7 +174,7 @@ function startQuiz(mode){
 
 function viewQuiz(){
   if (quiz.done) return viewResult();
-  const q = quiz.qs[quiz.i], title = { test:`Day ${quiz.day} test`, meanings:"Meanings", plurals:"Plurals", review:"Review mix" }[quiz.mode];
+  const q = quiz.qs[quiz.i], title = { test:`Day ${quiz.day} test`, meanings:"Meanings", plurals:"Plurals", review:"Review mix", poss:"Possessive articles" }[quiz.mode];
   let h = `<div class="muted" style="display:flex;justify-content:space-between"><span>${title}</span><span>${quiz.i+1} / ${quiz.qs.length}</span></div>
     <div class="bar"><div style="width:${quiz.i / quiz.qs.length * 100}%"></div></div>
     <div class="glass q"><div class="big">${q.prompt}</div>${q.hint ? `<div class="muted">${esc(q.hint)}</div>` : ""}`;
@@ -200,7 +201,7 @@ function submitAnswer(val){
   if (!quiz || quiz.answered) return;
   const q = quiz.qs[quiz.i]; quiz.answered = true; quiz.last = val;
   if (norm(val) === norm(q.answer)){ quiz.score++; S.xp += quiz.mode === "test" ? 10 : 5; S.misses = S.misses.filter(k => k !== q.key); }
-  else { quiz.wrong.push(q); if (!S.misses.includes(q.key)) S.misses.push(q.key); }
+  else { quiz.wrong.push(q); if (q.key && !S.misses.includes(q.key)) S.misses.push(q.key); }
   save(); render();
 }
 function nextQ(){ quiz.i++; quiz.answered = false; quiz.last = null; if (quiz.i >= quiz.qs.length) finishQuiz(); render(); if (quiz.done && quiz.passed && quiz.mode === "test") confetti(); }
@@ -212,6 +213,11 @@ function finishQuiz(){
     if (quiz.passed){ if (!t.passed) S.xp += 50; t.passed = true; }
     S.tests[quiz.day] = t;
   }
+  if (quiz.mode === "poss"){
+    const p = S.grammar.poss; p.attempts++;
+    if (!p.bestTotal || quiz.score / quiz.qs.length >= p.best / p.bestTotal){ p.best = quiz.score; p.bestTotal = quiz.qs.length; }
+    if (quiz.passed) S.xp += 20;
+  }
   S.days[localDate()] = true; save();
 }
 function viewResult(){
@@ -220,15 +226,59 @@ function viewResult(){
   if (quiz.mode === "test") msg = quiz.passed
     ? `<div class="fb ok">Bestanden! ✓ ${quiz.day < 30 ? "Day " + (quiz.day+1) + " is unlocked." : "You finished all 30 days! 🎉"}</div>`
     : `<div class="fb bad">Not passed yet (need ${quiz.need}/${total}). Review today's words and try again.</div>`;
+  else if (quiz.mode === "poss") msg = quiz.passed
+    ? `<div class="fb ok">Stark! ✓ You reached the pass mark (${quiz.need}/${total}). +20 XP</div>`
+    : `<div class="fb bad">Need ${quiz.need}/${total} to pass. Check the explanations below and try a new set.</div>`;
   else msg = `<div class="muted">Practice only – your day progress is unchanged.</div>`;
   let h = `<div class="glass pad center"><div style="display:flex;justify-content:center">${ring(pct, 150, quiz.score + "/" + total, "correct")}</div>${msg}`;
   if (quiz.wrong.length) h += `<h2>Review these</h2><div style="text-align:left">${quiz.wrong.map(q => `<div style="margin:6px 0">• ${esc(q.explain)}</div>`).join("")}</div>`;
-  h += `<div class="row" style="justify-content:center"><button class="btn" onclick="startQuiz('${quiz.mode}')">Try again</button>
+  h += `<div class="row" style="justify-content:center"><button class="btn" onclick="${quiz.mode === "poss" ? "startPoss(" + quiz.qs.length + ")" : "startQuiz('" + quiz.mode + "')"}">${quiz.mode === "poss" ? "New random set" : "Try again"}</button>
     ${quiz.mode === "test" && quiz.passed && quiz.day < 30 ? `<button class="btn alt" onclick="ui.learnIdx=${quiz.day};ui.deck=null;ui.learnMode='list';setTab('learn')">Learn Day ${quiz.day+1} →</button>` : ""}
     <button class="btn alt" onclick="quiz=null;render()">Back</button></div></div>`;
   return h;
 }
 document.addEventListener("keydown", e => { if (quiz && quiz.answered && !quiz.done && e.key === "Enter") nextQ(); });
+
+/* ---------- GRAMMAR: possessive articles ---------- */
+const possForm = (stem, fem) => fem ? (stem === "euer" ? "eure" : stem === "unser" ? "unsere" : stem + "e") : stem;
+const capFirst = s => s.charAt(0).toUpperCase() + s.slice(1);
+function makePoss(item){
+  const [owner, art, noun, sent] = item, stem = POSS_STEM[owner], fem = art === "die" || art === "pl";
+  const fix = s => sent.startsWith("___") ? capFirst(s) : s;
+  const answer = fix(possForm(stem, fem)), opts = [answer];
+  const add = v => { if (opts.length < 4 && !opts.some(o => norm(o) === norm(v))) opts.push(v); };
+  add(fix(possForm(stem, !fem)));
+  shuffle(Object.values(POSS_STEM)).forEach(s => add(fix(possForm(s, fem))));
+  const full = sent.replace("___", answer);
+  const why = art === "pl" ? `${noun} is plural, so add -e` : art === "die" ? `${noun} is die (feminine), so add -e` : `${noun} is ${art}, so no ending`;
+  const spell = fem && stem === "euer" ? " (euer drops its middle e: eure)" : fem && stem === "unser" ? " (unser + e = unsere)" : "";
+  return { type:"choice", prompt:esc(sent).replace("___", '<span class="blank">_____</span>'), hint:"Owner: " + owner,
+    options:shuffle(opts), answer, say:full, explain:`${full} — ${owner} → ${stem}; ${why}${spell}.` };
+}
+function startPoss(n){
+  const g = (S.grammar = S.grammar || {}), p = (g.poss = g.poss || { attempts:0, best:0, bestTotal:0, seen:[] });
+  const all = POSS.map((_, i) => i);
+  let ids = shuffle(all.filter(i => !p.seen.includes(i))).slice(0, n);      // unseen sentences first
+  if (ids.length < n){ ids = ids.concat(shuffle(all.filter(i => !ids.includes(i))).slice(0, n - ids.length)); p.seen = ids.slice(); }
+  else p.seen = p.seen.concat(ids);
+  quiz = { mode:"poss", n, qs:ids.map(i => makePoss(POSS[i])), i:0, score:0, wrong:[], answered:false, last:null, done:false };
+  render();
+}
+function viewGrammar(){
+  const p = (S.grammar && S.grammar.poss) || { attempts:0, best:0, bestTotal:0, seen:[] }, n = ui.gq || 10;
+  const rows = [["ich","mein","meine"],["du","dein","deine"],["er / es","sein","seine"],["sie (she)","ihr","ihre"],["wir","unser","unsere"],["ihr (you all)","euer","eure"],["sie (they)","ihr","ihre"],["Sie (formal)","Ihr","Ihre"]];
+  return `<div class="glass pad"><b>Possessive articles</b> <span class="muted">· mein, dein, sein…</span>
+      <p class="muted tiny" style="margin:6px 0 10px">Nominative. The owner picks the stem, the noun picks the ending.</p>
+      <table class="gt"><tr><th>Owner</th><th>der / das</th><th>die / plural</th></tr>
+        ${rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join("")}</table>
+      <p class="muted tiny" style="margin:10px 0 0">der / das word: no ending. die word or plural: add -e. Careful: euer → eure.</p></div>
+    <div class="glass pad mt"><b>Practice test</b> <span class="muted">· ${POSS.length} sentences, picked at random</span>
+      <label class="muted tiny" style="display:block;margin-top:10px">Number of questions</label>
+      <select onchange="ui.gq=+this.value">${[10,15,20].map(k => `<option value="${k}" ${k===n?"selected":""}>${k} questions</option>`).join("")}</select>
+      ${p.attempts ? `<div class="muted" style="margin-top:8px">Best: ${p.best}/${p.bestTotal} · tries: ${p.attempts} · sentences seen: ${Math.min(p.seen.length, POSS.length)}/${POSS.length}</div>` : ""}
+      <div class="row"><button class="btn" onclick="startPoss(ui.gq||10)">Start test</button></div>
+      <p class="muted tiny" style="margin-bottom:0">Pass mark 80 %. New sentences first, so you see all ${POSS.length} before any repeat. Wrong answers get an explanation.</p></div>`;
+}
 
 /* ---------- PROGRESS ---------- */
 function viewProgress(){
