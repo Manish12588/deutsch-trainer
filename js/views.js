@@ -287,8 +287,26 @@ function possStat(set){
 function viewPossTopic(){
   const n = ui.gq || 10, set = ui.gset || "basic", total = possPoolOf(set).reduce((a, k) => a + possData(k).length, 0);
   const rows = [["ich","mein","meine"],["du","dein","deine"],["er / es","sein","seine"],["sie (she)","ihr","ihre"],["wir","unser","unsere"],["ihr (you all)","euer","eure"],["sie (they)","ihr","ihre"],["Sie (formal)","Ihr","Ihre"]];
-  return `<div class="glass pad"><b>Possessive articles</b> <span class="muted">· mein, dein, sein…</span>
-      <p class="muted tiny" style="margin:6px 0 10px">Nominative. The owner picks the stem, the noun picks the ending.</p>
+  const how = `<div class="glass pad how"><b>How it works</b>
+      <p class="muted tiny" style="margin:4px 0 10px">Every possessive needs two answers.</p>
+      <div class="hq"><span class="hn">1</span><p><b>Who owns it?</b> That picks the <span class="st">stem</span>: ich → <span class="st">mein</span>, du → <span class="st">dein</span>, er → <span class="st">sein</span> …</p></div>
+      <div class="hq"><span class="hn">2</span><p><b>Which noun is it?</b> That picks the <span class="en">ending</span>.</p></div>
+      <div class="hgrid">
+        <div><b>der / das</b>no ending<br><span class="st">mein</span> Vater<br><span class="st">mein</span> Kind</div>
+        <div><b>die / plural</b>add -e<br><span class="st">mein</span><span class="en">e</span> Mutter<br><span class="st">mein</span><span class="en">e</span> Eltern</div></div>
+      <div class="heq">ich + die Mutter → <span class="st">mein</span> + <span class="en">e</span> = <b>meine Mutter</b></div>
+      <div class="hh">Memory tricks</div>
+      <ul><li><b>It's just ein / eine with a letter in front.</b> m+ein, d+ein, s+ein. ein Vater → mein Vater, eine Mutter → meine Mutter.</li>
+        <li><b>The first letter echoes the pronoun.</b> du → dein, wir → unser (uns), ihr → euer (euch).</li>
+        <li><b>Say a family set out loud:</b> mein Vater, meine Mutter, mein Kind, meine Eltern.</li></ul>
+      <div class="hh">Examples</div>
+      <ul><li>Ich habe einen Bruder. Das ist <b>mein</b> Bruder.</li>
+        <li>Anna hat eine Katze. Das ist <b>ihre</b> Katze.</li>
+        <li>Wir haben eine Wohnung. Das ist <b>unsere</b> Wohnung.</li></ul>
+      <div class="hh">Watch out</div>
+      <div class="hwarn">The ending follows the <b>noun</b>, not the owner: a man's mother is <i>seine</i> Mutter.<br>euer → <b>eure</b>, unser → <b>unsere</b>.<br>Formal <b>Ihr</b> always has a capital I.</div></div>`;
+  return how + `<div class="glass pad mt"><b>All forms</b> <span class="muted">· nominative</span>
+      <p class="muted tiny" style="margin:6px 0 10px">Find the owner in the first column, then pick the ending.</p>
       <table class="gt"><tr><th>Owner</th><th>der / das</th><th>die / plural</th></tr>
         ${rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join("")}</table>
       <p class="muted tiny" style="margin:10px 0 0">der / das word: no ending. die word or plural: add -e. Careful: euer → eure.</p></div>
