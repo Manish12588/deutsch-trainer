@@ -284,7 +284,7 @@ function possStat(set){
   const total = pools.reduce((a, k) => a + possData(k).length, 0), seen = pools.reduce((a, k) => a + ((S.grammar && S.grammar[k] && S.grammar[k].seen.length) || 0), 0);
   return `<div class="muted tiny" style="margin-top:4px">${POSS_SETS[set].label}: ${p && p.attempts ? `best ${p.best}/${p.bestTotal} · ${p.attempts} ${p.attempts === 1 ? "try" : "tries"}` : "not tried yet"} · seen ${Math.min(seen, total)}/${total}</div>`;
 }
-function viewGrammar(){
+function viewPossTopic(){
   const n = ui.gq || 10, set = ui.gset || "basic", total = possPoolOf(set).reduce((a, k) => a + possData(k).length, 0);
   const rows = [["ich","mein","meine"],["du","dein","deine"],["er / es","sein","seine"],["sie (she)","ihr","ihre"],["wir","unser","unsere"],["ihr (you all)","euer","eure"],["sie (they)","ihr","ihre"],["Sie (formal)","Ihr","Ihre"]];
   return `<div class="glass pad"><b>Possessive articles</b> <span class="muted">· mein, dein, sein…</span>
@@ -301,6 +301,20 @@ function viewGrammar(){
       <div class="row"><button class="btn" onclick="startPoss(ui.gq||10, ui.gset||'basic')">Start test</button></div>
       <p class="muted tiny" style="margin-bottom:0">Pass mark 80 %. Random questions, unseen sentences first, so you see all ${total} before any repeat. Wrong answers get an explanation.</p>
       <div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px">${possStat("basic")}${possStat("ctx")}${possStat("mix")}</div></div>`;
+}
+
+/* Grammar tab: topic list on the left, selected topic on the right.
+   To add a topic: write a viewXxxTopic() function and add one entry here. */
+const GRAMMAR_TOPICS = [
+  { id:"poss", title:"Possessive articles", sub:"mein, dein, sein…", view:viewPossTopic }
+];
+function viewGrammar(){
+  const cur = GRAMMAR_TOPICS.find(x => x.id === ui.gtopic) || GRAMMAR_TOPICS[0];
+  return `<div class="gl">
+    <nav class="glass gnav" aria-label="Grammar topics"><div class="gnav-h">Topics</div>
+      ${GRAMMAR_TOPICS.map(x => `<button class="gti ${x.id === cur.id ? "on" : ""}" onclick="ui.gtopic='${x.id}';render()"><b>${x.title}</b><span>${x.sub}</span></button>`).join("")}
+    </nav>
+    <section class="gmain">${cur.view()}</section></div>`;
 }
 
 /* ---------- PROGRESS ---------- */

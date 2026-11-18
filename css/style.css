@@ -127,4 +127,17 @@ label{display:block;margin:12px 0 6px;font-size:13px;color:var(--muted)}
 .gt{width:100%;border-collapse:collapse;font-size:15px}
 .gt th{font-size:12px;font-weight:600;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
 .gt td{padding:7px 8px;border-bottom:1px solid var(--line)}.gt td:first-child{color:var(--muted)}
-.blank{display:inline-block;min-width:64px;border-bottom:2px solid var(--accent);margin:0 2px;color:transparent;user-select:none}
+.blank{display:inline-block;min-width:64px;border-bottom:2px solid var(--accent);margin:0 2px;color:transparent;user-select:none}.gl{display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px;align-items:start}
+.gl .gmain>.glass:first-child{margin-top:0}
+.gnav{padding:10px;position:sticky;top:12px}
+.gnav-h{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:4px 8px 8px}
+.gti{display:block;width:100%;text-align:left;padding:10px 12px;border:1px solid transparent;border-radius:12px;background:transparent;color:var(--text);cursor:pointer;font-size:15px;line-height:1.3}
+.gti span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.gti:hover{background:var(--glass2)}
+.gti.on{background:var(--glass2);border-color:var(--accent)}
+@media (max-width:720px){
+  .gl{grid-template-columns:minmax(0,1fr)}
+  .gnav{position:static;display:flex;gap:8px;overflow-x:auto;padding:8px}
+  .gnav-h{display:none}
+  .gti{width:auto;flex:none;white-space:nowrap}
+}
