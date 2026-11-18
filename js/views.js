@@ -308,7 +308,7 @@ function viewPossTopic(){
         <li>Anna hat eine Katze. Das ist <b>ihre</b> Katze.</li>
         <li>Wir haben eine Wohnung. Das ist <b>unsere</b> Wohnung.</li></ul>
       <div class="hh">Watch out</div>
-      <div class="hwarn">The ending follows the <b>noun</b>, not the owner: a man's mother is <i>seine</i> Mutter.<br>euer → <b>eure</b>, unser → <b>unsere</b>.<br>Formal <b>Ihr</b> always has a capital I.</div>` : formula}</div>`;
+      <div class="hwarn">The ending follows the <b>noun</b>, not the owner: a man's mother is <i>seine</i> Mutter.<br>euer → <b>eure</b>, unser → <b>unsere</b>.<br>Formal <b>Ihr</b> always has a capital I.</div>` : ""}</div>`;
   return how + `<div class="glass pad mt"><b>All forms</b> <span class="muted">· nominative</span>
       <p class="muted tiny" style="margin:6px 0 10px">Find the owner in the first column, then pick the ending.</p>
       <table class="gt"><tr><th>Owner</th><th>der / das</th><th>die / plural</th></tr>
