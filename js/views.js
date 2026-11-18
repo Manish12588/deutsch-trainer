@@ -284,11 +284,33 @@ function possStat(set){
   const total = pools.reduce((a, k) => a + possData(k).length, 0), seen = pools.reduce((a, k) => a + ((S.grammar && S.grammar[k] && S.grammar[k].seen.length) || 0), 0);
   return `<div class="muted tiny" style="margin-top:4px">${POSS_SETS[set].label}: ${p && p.attempts ? `best ${p.best}/${p.bestTotal} · ${p.attempts} ${p.attempts === 1 ? "try" : "tries"}` : "not tried yet"} · seen ${Math.min(seen, total)}/${total}</div>`;
 }
-function viewGrammar(){
+const howOpen = () => LSget("gt.how", true);                 // remembered per browser, open on first visit
+function toggleHow(){ LSset("gt.how", !howOpen()); render(); }
+function viewPossTopic(){
   const n = ui.gq || 10, set = ui.gset || "basic", total = possPoolOf(set).reduce((a, k) => a + possData(k).length, 0);
   const rows = [["ich","mein","meine"],["du","dein","deine"],["er / es","sein","seine"],["sie (she)","ihr","ihre"],["wir","unser","unsere"],["ihr (you all)","euer","eure"],["sie (they)","ihr","ihre"],["Sie (formal)","Ihr","Ihre"]];
-  return `<div class="glass pad"><b>Possessive articles</b> <span class="muted">· mein, dein, sein…</span>
-      <p class="muted tiny" style="margin:6px 0 10px">Nominative. The owner picks the stem, the noun picks the ending.</p>
+  const open = howOpen(), formula = `<div class="heq">ich + die Mutter → <span class="st">mein</span> + <span class="en">e</span> = <b>meine Mutter</b></div>`;
+  const how = `<div class="glass pad how">
+      <button class="hhead" onclick="toggleHow()" aria-expanded="${open}"><b>How it works</b><span class="hmore">${open ? "Hide" : "Show"} ${open ? "▴" : "▾"}</span></button>
+      ${open ? `<p class="muted tiny" style="margin:4px 0 10px">Every possessive needs two answers.</p>
+      <div class="hq"><span class="hn">1</span><p><b>Who owns it?</b> That picks the <span class="st">stem</span>: ich → <span class="st">mein</span>, du → <span class="st">dein</span>, er → <span class="st">sein</span> …</p></div>
+      <div class="hq"><span class="hn">2</span><p><b>Which noun is it?</b> That picks the <span class="en">ending</span>.</p></div>
+      <div class="hgrid">
+        <div><b>der / das</b>no ending<br><span class="st">mein</span> Vater<br><span class="st">mein</span> Kind</div>
+        <div><b>die / plural</b>add -e<br><span class="st">mein</span><span class="en">e</span> Mutter<br><span class="st">mein</span><span class="en">e</span> Eltern</div></div>
+      ${formula}
+      <div class="hh">Memory tricks</div>
+      <ul><li><b>It's just ein / eine with a letter in front.</b> m+ein, d+ein, s+ein. ein Vater → mein Vater, eine Mutter → meine Mutter.</li>
+        <li><b>The first letter echoes the pronoun.</b> du → dein, wir → unser (uns), ihr → euer (euch).</li>
+        <li><b>Say a family set out loud:</b> mein Vater, meine Mutter, mein Kind, meine Eltern.</li></ul>
+      <div class="hh">Examples</div>
+      <ul><li>Ich habe einen Bruder. Das ist <b>mein</b> Bruder.</li>
+        <li>Anna hat eine Katze. Das ist <b>ihre</b> Katze.</li>
+        <li>Wir haben eine Wohnung. Das ist <b>unsere</b> Wohnung.</li></ul>
+      <div class="hh">Watch out</div>
+      <div class="hwarn">The ending follows the <b>noun</b>, not the owner: a man's mother is <i>seine</i> Mutter.<br>euer → <b>eure</b>, unser → <b>unsere</b>.<br>Formal <b>Ihr</b> always has a capital I.</div>` : ""}</div>`;
+  return how + `<div class="glass pad mt"><b>All forms</b> <span class="muted">· nominative</span>
+      <p class="muted tiny" style="margin:6px 0 10px">Find the owner in the first column, then pick the ending.</p>
       <table class="gt"><tr><th>Owner</th><th>der / das</th><th>die / plural</th></tr>
         ${rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join("")}</table>
       <p class="muted tiny" style="margin:10px 0 0">der / das word: no ending. die word or plural: add -e. Careful: euer → eure.</p></div>
@@ -301,6 +323,20 @@ function viewGrammar(){
       <div class="row"><button class="btn" onclick="startPoss(ui.gq||10, ui.gset||'basic')">Start test</button></div>
       <p class="muted tiny" style="margin-bottom:0">Pass mark 80 %. Random questions, unseen sentences first, so you see all ${total} before any repeat. Wrong answers get an explanation.</p>
       <div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px">${possStat("basic")}${possStat("ctx")}${possStat("mix")}</div></div>`;
+}
+
+/* Grammar tab: topic list on the left, selected topic on the right.
+   To add a topic: write a viewXxxTopic() function and add one entry here. */
+const GRAMMAR_TOPICS = [
+  { id:"poss", title:"Possessive articles", sub:"mein, dein, sein…", view:viewPossTopic }
+];
+function viewGrammar(){
+  const cur = GRAMMAR_TOPICS.find(x => x.id === ui.gtopic) || GRAMMAR_TOPICS[0];
+  return `<div class="gl">
+    <nav class="glass gnav" aria-label="Grammar topics"><div class="gnav-h">Topics</div>
+      ${GRAMMAR_TOPICS.map(x => `<button class="gti ${x.id === cur.id ? "on" : ""}" onclick="ui.gtopic='${x.id}';render()"><b>${x.title}</b><span>${x.sub}</span></button>`).join("")}
+    </nav>
+    <section class="gmain">${cur.view()}</section></div>`;
 }
 
 /* ---------- PROGRESS ---------- */
