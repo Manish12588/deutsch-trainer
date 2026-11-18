@@ -174,7 +174,7 @@ function startQuiz(mode){
 
 function viewQuiz(){
   if (quiz.done) return viewResult();
-  const q = quiz.qs[quiz.i], title = { test:`Day ${quiz.day} test`, meanings:"Meanings", plurals:"Plurals", review:"Review mix", poss:"Possessive articles" }[quiz.mode];
+  const q = quiz.qs[quiz.i], title = { test:`Day ${quiz.day} test`, meanings:"Meanings", plurals:"Plurals", review:"Review mix", poss:"Possessives · " + (quiz.setLabel || "") }[quiz.mode];
   let h = `<div class="muted" style="display:flex;justify-content:space-between"><span>${title}</span><span>${quiz.i+1} / ${quiz.qs.length}</span></div>
     <div class="bar"><div style="width:${quiz.i / quiz.qs.length * 100}%"></div></div>
     <div class="glass q"><div class="big">${q.prompt}</div>${q.hint ? `<div class="muted">${esc(q.hint)}</div>` : ""}`;
@@ -214,7 +214,8 @@ function finishQuiz(){
     S.tests[quiz.day] = t;
   }
   if (quiz.mode === "poss"){
-    const p = S.grammar.poss; p.attempts++;
+    const key = quiz.set === "ctx" || quiz.set === "mix" ? quiz.set : "poss";
+    const p = (S.grammar[key] = S.grammar[key] || { attempts:0, best:0, bestTotal:0, seen:[] }); p.attempts++;
     if (!p.bestTotal || quiz.score / quiz.qs.length >= p.best / p.bestTotal){ p.best = quiz.score; p.bestTotal = quiz.qs.length; }
     if (quiz.passed) S.xp += 20;
   }
@@ -232,7 +233,7 @@ function viewResult(){
   else msg = `<div class="muted">Practice only – your day progress is unchanged.</div>`;
   let h = `<div class="glass pad center"><div style="display:flex;justify-content:center">${ring(pct, 150, quiz.score + "/" + total, "correct")}</div>${msg}`;
   if (quiz.wrong.length) h += `<h2>Review these</h2><div style="text-align:left">${quiz.wrong.map(q => `<div style="margin:6px 0">• ${esc(q.explain)}</div>`).join("")}</div>`;
-  h += `<div class="row" style="justify-content:center"><button class="btn" onclick="${quiz.mode === "poss" ? "startPoss(" + quiz.qs.length + ")" : "startQuiz('" + quiz.mode + "')"}">${quiz.mode === "poss" ? "New random set" : "Try again"}</button>
+  h += `<div class="row" style="justify-content:center"><button class="btn" onclick="${quiz.mode === "poss" ? "startPoss(" + quiz.qs.length + ",'" + quiz.set + "')" : "startQuiz('" + quiz.mode + "')"}">${quiz.mode === "poss" ? "New random set" : "Try again"}</button>
     ${quiz.mode === "test" && quiz.passed && quiz.day < 30 ? `<button class="btn alt" onclick="ui.learnIdx=${quiz.day};ui.deck=null;ui.learnMode='list';setTab('learn')">Learn Day ${quiz.day+1} →</button>` : ""}
     <button class="btn alt" onclick="quiz=null;render()">Back</button></div></div>`;
   return h;
@@ -242,7 +243,7 @@ document.addEventListener("keydown", e => { if (quiz && quiz.answered && !quiz.d
 /* ---------- GRAMMAR: possessive articles ---------- */
 const possForm = (stem, fem) => fem ? (stem === "euer" ? "eure" : stem === "unser" ? "unsere" : stem + "e") : stem;
 const capFirst = s => s.charAt(0).toUpperCase() + s.slice(1);
-function makePoss(item){
+function makePoss(item, inContext){
   const [owner, art, noun, sent] = item, stem = POSS_STEM[owner], fem = art === "die" || art === "pl";
   const fix = s => sent.startsWith("___") ? capFirst(s) : s;
   const answer = fix(possForm(stem, fem)), opts = [answer];
@@ -252,32 +253,54 @@ function makePoss(item){
   const full = sent.replace("___", answer);
   const why = art === "pl" ? `${noun} is plural, so add -e` : art === "die" ? `${noun} is die (feminine), so add -e` : `${noun} is ${art}, so no ending`;
   const spell = fem && stem === "euer" ? " (euer drops its middle e: eure)" : fem && stem === "unser" ? " (unser + e = unsere)" : "";
-  return { type:"choice", prompt:esc(sent).replace("___", '<span class="blank">_____</span>'), hint:"Owner: " + owner,
+  return { type:"choice", prompt:esc(sent).replace("___", '<span class="blank">_____</span>'), hint:inContext ? "Who owns it? Read the first sentence." : "Owner: " + owner,
     options:shuffle(opts), answer, say:full, explain:`${full} — ${owner} → ${stem}; ${why}${spell}.` };
 }
-function startPoss(n){
-  const g = (S.grammar = S.grammar || {}), p = (g.poss = g.poss || { attempts:0, best:0, bestTotal:0, seen:[] });
-  const all = POSS.map((_, i) => i);
-  let ids = shuffle(all.filter(i => !p.seen.includes(i))).slice(0, n);      // unseen sentences first
-  if (ids.length < n){ ids = ids.concat(shuffle(all.filter(i => !ids.includes(i))).slice(0, n - ids.length)); p.seen = ids.slice(); }
-  else p.seen = p.seen.concat(ids);
-  quiz = { mode:"poss", n, qs:ids.map(i => makePoss(POSS[i])), i:0, score:0, wrong:[], answered:false, last:null, done:false };
+const POSS_SETS = {
+  basic:{ label:"Owner given",  pools:["poss"],        info:"The owner is shown, e.g. (ich) ___ Mutter ist nett." },
+  ctx:  { label:"In context",   pools:["ctx"],         info:"Find the owner yourself: Peter hat einen Hund. Das ist ___ Hund." },
+  mix:  { label:"Mixed",        pools:["poss","ctx"],  info:"Both sets shuffled together." } };
+const possData = k => k === "poss" ? POSS : POSS_CTX;
+const possPoolOf = set => POSS_SETS[set].pools;
+function startPoss(n, set){
+  set = POSS_SETS[set] ? set : "basic";
+  const g = (S.grammar = S.grammar || {}), pools = possPoolOf(set);
+  let pick = [];
+  pools.forEach((k, pi) => {
+    g[k] = g[k] || { attempts:0, best:0, bestTotal:0, seen:[] };
+    const need = pools.length === 1 ? n : (pi === 0 ? Math.ceil(n / 2) : Math.floor(n / 2));    // Mixed = half from each set
+    const all = possData(k).map((_, i) => i);
+    let ids = shuffle(all.filter(i => !g[k].seen.includes(i))).slice(0, need);                    // unseen sentences first
+    if (ids.length < need){ ids = ids.concat(shuffle(all.filter(i => !ids.includes(i))).slice(0, need - ids.length)); g[k].seen = ids.slice(); }   // all seen: new round
+    else g[k].seen = g[k].seen.concat(ids);
+    pick = pick.concat(ids.map(i => [k, i]));
+  });
+  pick = shuffle(pick);
+  quiz = { mode:"poss", set, setLabel:POSS_SETS[set].label, n, qs:pick.map(([k, i]) => makePoss(possData(k)[i], k === "ctx")), i:0, score:0, wrong:[], answered:false, last:null, done:false };
   render();
 }
+function possStat(set){
+  const key = set === "basic" ? "poss" : set, p = S.grammar && S.grammar[key], pools = possPoolOf(set);
+  const total = pools.reduce((a, k) => a + possData(k).length, 0), seen = pools.reduce((a, k) => a + ((S.grammar && S.grammar[k] && S.grammar[k].seen.length) || 0), 0);
+  return `<div class="muted tiny" style="margin-top:4px">${POSS_SETS[set].label}: ${p && p.attempts ? `best ${p.best}/${p.bestTotal} · ${p.attempts} ${p.attempts === 1 ? "try" : "tries"}` : "not tried yet"} · seen ${Math.min(seen, total)}/${total}</div>`;
+}
 function viewGrammar(){
-  const p = (S.grammar && S.grammar.poss) || { attempts:0, best:0, bestTotal:0, seen:[] }, n = ui.gq || 10;
+  const n = ui.gq || 10, set = ui.gset || "basic", total = possPoolOf(set).reduce((a, k) => a + possData(k).length, 0);
   const rows = [["ich","mein","meine"],["du","dein","deine"],["er / es","sein","seine"],["sie (she)","ihr","ihre"],["wir","unser","unsere"],["ihr (you all)","euer","eure"],["sie (they)","ihr","ihre"],["Sie (formal)","Ihr","Ihre"]];
   return `<div class="glass pad"><b>Possessive articles</b> <span class="muted">· mein, dein, sein…</span>
       <p class="muted tiny" style="margin:6px 0 10px">Nominative. The owner picks the stem, the noun picks the ending.</p>
       <table class="gt"><tr><th>Owner</th><th>der / das</th><th>die / plural</th></tr>
         ${rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join("")}</table>
       <p class="muted tiny" style="margin:10px 0 0">der / das word: no ending. die word or plural: add -e. Careful: euer → eure.</p></div>
-    <div class="glass pad mt"><b>Practice test</b> <span class="muted">· ${POSS.length} sentences, picked at random</span>
+    <div class="glass pad mt"><b>Practice test</b> <span class="muted">· ${POSS.length + POSS_CTX.length} sentences in 2 sets</span>
+      <label class="muted tiny" style="display:block;margin-top:10px">Practice set</label>
+      <select onchange="ui.gset=this.value;render()">${Object.keys(POSS_SETS).map(k => `<option value="${k}" ${k===set?"selected":""}>${POSS_SETS[k].label} · ${possPoolOf(k).reduce((a, q) => a + possData(q).length, 0)} sentences</option>`).join("")}</select>
+      <div class="muted tiny" style="margin-top:6px">${POSS_SETS[set].info}</div>
       <label class="muted tiny" style="display:block;margin-top:10px">Number of questions</label>
       <select onchange="ui.gq=+this.value">${[10,15,20].map(k => `<option value="${k}" ${k===n?"selected":""}>${k} questions</option>`).join("")}</select>
-      ${p.attempts ? `<div class="muted" style="margin-top:8px">Best: ${p.best}/${p.bestTotal} · tries: ${p.attempts} · sentences seen: ${Math.min(p.seen.length, POSS.length)}/${POSS.length}</div>` : ""}
-      <div class="row"><button class="btn" onclick="startPoss(ui.gq||10)">Start test</button></div>
-      <p class="muted tiny" style="margin-bottom:0">Pass mark 80 %. New sentences first, so you see all ${POSS.length} before any repeat. Wrong answers get an explanation.</p></div>`;
+      <div class="row"><button class="btn" onclick="startPoss(ui.gq||10, ui.gset||'basic')">Start test</button></div>
+      <p class="muted tiny" style="margin-bottom:0">Pass mark 80 %. Random questions, unseen sentences first, so you see all ${total} before any repeat. Wrong answers get an explanation.</p>
+      <div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px">${possStat("basic")}${possStat("ctx")}${possStat("mix")}</div></div>`;
 }
 
 /* ---------- PROGRESS ---------- */
