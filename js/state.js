@@ -67,13 +67,23 @@ function ring(pct, size, big, small){
     <text x="50%" y="66%" text-anchor="middle" fill="var(--muted)" font-size="${size/10}">${small}</text></svg>`;
 }
 
+let confettiRaf = 0;
 function confetti(){
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  cancelAnimationFrame(confettiRaf);
   const cols = ["#6fb1b6","#7f9fcb","#dba2b7","#e0b878","#8fc8a3"];
-  const c = el("confetti"), x = c.getContext("2d"); c.width = innerWidth; c.height = innerHeight; c.style.display = "block";
-  const P = Array.from({length:110}, () => ({x:Math.random()*c.width, y:-20-Math.random()*c.height*.5, vx:(Math.random()-.5)*3,
-    vy:2+Math.random()*3.5, s:5+Math.random()*6, c:pick(cols), r:Math.random()*6}));
-  let t = 0;
-  (function f(){ x.clearRect(0,0,c.width,c.height);
-    P.forEach(p => { p.x += p.vx; p.y += p.vy; p.r += .12; x.fillStyle = p.c; x.save(); x.translate(p.x,p.y); x.rotate(p.r); x.fillRect(-p.s/2,-p.s/2,p.s,p.s*.6); x.restore(); });
-    if (++t < 180) requestAnimationFrame(f); else { x.clearRect(0,0,c.width,c.height); c.style.display = "none"; } })();
+  const c = el("confetti"), x = c.getContext("2d");
+  // start on the next frame so it doesn't compete with the results render
+  confettiRaf = requestAnimationFrame(() => {
+    c.width = innerWidth; c.height = innerHeight; c.style.display = "block";
+    document.body.classList.add("celebrating");
+    const P = Array.from({length:70}, () => ({x:Math.random()*c.width, y:-20-Math.random()*c.height*.5, vx:(Math.random()-.5)*3,
+      vy:2+Math.random()*3.5, s:5+Math.random()*6, c:pick(cols), r:Math.random()*6}));
+    const end = performance.now() + 3000;
+    (function f(now){ x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,c.width,c.height);
+      for (const p of P){ p.x += p.vx; p.y += p.vy; p.r += .12; const cs = Math.cos(p.r), sn = Math.sin(p.r);
+        x.setTransform(cs,sn,-sn,cs,p.x,p.y); x.fillStyle = p.c; x.fillRect(-p.s/2,-p.s/2,p.s,p.s*.6); }
+      if (now < end) confettiRaf = requestAnimationFrame(f);
+      else { c.width = c.height = 0; c.style.display = "none"; document.body.classList.remove("celebrating"); } })(performance.now());
+  });
 }
