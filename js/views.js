@@ -348,8 +348,8 @@ function makeCase(item, k){
   const gender = art === "pl" ? "plural" : art, changes = k === "def" ? "der → den" : "ein → einen";
   const explain = cs === "A"
     ? `${full} — ${why} + object (wen/was?) → accusative. ${noun} is ${gender}${art === "der" ? ": " + changes + " (only masculine changes)" : ": no change"}.`
-    : `${full} — ${why === "sein" ? "after sein" : noun + " is the subject (wer/was?)"} → nominative, no change: ${lc}.`;
-  return { type:"choice", prompt:esc(sent).replace("___", '<span class="blank">_____</span>'), hint:noun + " = " + gender,
+    : `${full} — ${why === "sein" ? "after sein" : noun + " is the subject (wer/was?)"} → nominative, no change: ${lc}. (${noun} is ${gender})`;
+  return { type:"choice", prompt:esc(sent).replace("___", '<span class="blank">_____</span>'), hint:"",
     options:CASE_OPTS[k].map(fix), answer, say:full, explain };
 }
 function startCase(n, set){
@@ -409,7 +409,7 @@ function viewCaseTopic(){
       <label class="muted tiny" style="display:block;margin-top:10px">Number of questions</label>
       <select onchange="ui.cq=+this.value">${[10,15,20].map(k => `<option value="${k}" ${k===n?"selected":""}>${k} questions</option>`).join("")}</select>
       <div class="row"><button class="btn" onclick="startCase(ui.cq||10, ui.cset||'def')">Start test</button></div>
-      <p class="muted tiny" style="margin-bottom:0">Pass mark 80 %. Random questions, unseen sentences first, so you see all ${total} before any repeat. The noun's gender is shown as a hint. Wrong answers get an explanation.</p>
+      <p class="muted tiny" style="margin-bottom:0">Pass mark 80 %. Random questions, unseen sentences first, so you see all ${total} before any repeat. No gender hint: you need to know the noun. Wrong answers tell you its gender.</p>
       <div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px">${caseStat("def")}${caseStat("ind")}${caseStat("mix")}</div></div>`;
 }
 
