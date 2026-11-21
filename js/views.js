@@ -174,7 +174,7 @@ function startQuiz(mode){
 
 function viewQuiz(){
   if (quiz.done) return viewResult();
-  const q = quiz.qs[quiz.i], title = { test:`Day ${quiz.day} test`, meanings:"Meanings", plurals:"Plurals", review:"Review mix", poss:"Possessives · " + (quiz.setLabel || "") }[quiz.mode];
+  const q = quiz.qs[quiz.i], title = { test:`Day ${quiz.day} test`, meanings:"Meanings", plurals:"Plurals", review:"Review mix", poss:"Possessives · " + (quiz.setLabel || ""), case:"Cases · " + (quiz.setLabel || "") }[quiz.mode];
   let h = `<div class="muted" style="display:flex;justify-content:space-between"><span>${title}</span><span>${quiz.i+1} / ${quiz.qs.length}</span></div>
     <div class="bar"><div style="width:${quiz.i / quiz.qs.length * 100}%"></div></div>
     <div class="glass q"><div class="big">${q.prompt}</div>${q.hint ? `<div class="muted">${esc(q.hint)}</div>` : ""}`;
@@ -219,6 +219,12 @@ function finishQuiz(){
     if (!p.bestTotal || quiz.score / quiz.qs.length >= p.best / p.bestTotal){ p.best = quiz.score; p.bestTotal = quiz.qs.length; }
     if (quiz.passed) S.xp += 20;
   }
+  if (quiz.mode === "case"){
+    const key = quiz.set === "mix" ? "cmix" : quiz.set === "ind" ? "cind" : "cdef";
+    const p = (S.grammar[key] = S.grammar[key] || { attempts:0, best:0, bestTotal:0, seen:[] }); p.attempts++;
+    if (!p.bestTotal || quiz.score / quiz.qs.length >= p.best / p.bestTotal){ p.best = quiz.score; p.bestTotal = quiz.qs.length; }
+    if (quiz.passed) S.xp += 20;
+  }
   S.days[localDate()] = true; save();
 }
 function viewResult(){
@@ -227,13 +233,13 @@ function viewResult(){
   if (quiz.mode === "test") msg = quiz.passed
     ? `<div class="fb ok">Bestanden! ✓ ${quiz.day < 30 ? "Day " + (quiz.day+1) + " is unlocked." : "You finished all 30 days! 🎉"}</div>`
     : `<div class="fb bad">Not passed yet (need ${quiz.need}/${total}). Review today's words and try again.</div>`;
-  else if (quiz.mode === "poss") msg = quiz.passed
+  else if (quiz.mode === "poss" || quiz.mode === "case") msg = quiz.passed
     ? `<div class="fb ok">Stark! ✓ You reached the pass mark (${quiz.need}/${total}). +20 XP</div>`
     : `<div class="fb bad">Need ${quiz.need}/${total} to pass. Check the explanations below and try a new set.</div>`;
   else msg = `<div class="muted">Practice only – your day progress is unchanged.</div>`;
   let h = `<div class="glass pad center"><div style="display:flex;justify-content:center">${ring(pct, 150, quiz.score + "/" + total, "correct")}</div>${msg}`;
   if (quiz.wrong.length) h += `<h2>Review these</h2><div style="text-align:left">${quiz.wrong.map(q => `<div style="margin:6px 0">• ${esc(q.explain)}</div>`).join("")}</div>`;
-  h += `<div class="row" style="justify-content:center"><button class="btn" onclick="${quiz.mode === "poss" ? "startPoss(" + quiz.qs.length + ",'" + quiz.set + "')" : "startQuiz('" + quiz.mode + "')"}">${quiz.mode === "poss" ? "New random set" : "Try again"}</button>
+  h += `<div class="row" style="justify-content:center"><button class="btn" onclick="${quiz.mode === "poss" ? "startPoss(" + quiz.qs.length + ",'" + quiz.set + "')" : quiz.mode === "case" ? "startCase(" + quiz.qs.length + ",'" + quiz.set + "')" : "startQuiz('" + quiz.mode + "')"}">${quiz.mode === "poss" || quiz.mode === "case" ? "New random set" : "Try again"}</button>
     ${quiz.mode === "test" && quiz.passed && quiz.day < 30 ? `<button class="btn alt" onclick="ui.learnIdx=${quiz.day};ui.deck=null;ui.learnMode='list';setTab('learn')">Learn Day ${quiz.day+1} →</button>` : ""}
     <button class="btn alt" onclick="quiz=null;render()">Back</button></div></div>`;
   return h;
@@ -325,10 +331,93 @@ function viewPossTopic(){
       <div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px">${possStat("basic")}${possStat("ctx")}${possStat("mix")}</div></div>`;
 }
 
+/* ---------- GRAMMAR: nominative vs accusative ---------- */
+const CASE_ART = {
+  def:{ N:{ der:"der", das:"das", die:"die", pl:"die" }, A:{ der:"den", das:"das", die:"die", pl:"die" } },
+  ind:{ N:{ der:"ein", das:"ein", die:"eine" },          A:{ der:"einen", das:"ein", die:"eine" } } };
+const CASE_OPTS = { def:["der","den","das","die"], ind:["ein","einen","eine"] };
+const CASE_SETS = {
+  def:{ label:"der · den · das · die", pools:["def"],        info:"Definite articles: der / den, das, die." },
+  ind:{ label:"ein · einen · eine",    pools:["ind"],        info:"Indefinite articles: ein / einen, ein, eine." },
+  mix:{ label:"Mixed",                 pools:["def","ind"],  info:"Both sets shuffled together." } };
+const caseData = k => k === "def" ? CASE_DEF : CASE_IND;
+const caseKey = k => k === "def" ? "cdef" : "cind";
+function makeCase(item, k){
+  const [cs, art, noun, sent, why] = item, lc = CASE_ART[k][cs][art], start = sent.startsWith("___");
+  const fix = s => start ? capFirst(s) : s, answer = fix(lc), full = sent.replace("___", answer);
+  const gender = art === "pl" ? "plural" : art, changes = k === "def" ? "der → den" : "ein → einen";
+  const explain = cs === "A"
+    ? `${full} — ${why} + object (wen/was?) → accusative. ${noun} is ${gender}${art === "der" ? ": " + changes + " (only masculine changes)" : ": no change"}.`
+    : `${full} — ${why === "sein" ? "after sein" : noun + " is the subject (wer/was?)"} → nominative, no change: ${lc}.`;
+  return { type:"choice", prompt:esc(sent).replace("___", '<span class="blank">_____</span>'), hint:noun + " = " + gender,
+    options:CASE_OPTS[k].map(fix), answer, say:full, explain };
+}
+function startCase(n, set){
+  set = CASE_SETS[set] ? set : "def";
+  const g = (S.grammar = S.grammar || {}), pools = CASE_SETS[set].pools;
+  let pick = [];
+  pools.forEach((k, pi) => {
+    const gk = caseKey(k); g[gk] = g[gk] || { attempts:0, best:0, bestTotal:0, seen:[] };
+    const need = pools.length === 1 ? n : (pi === 0 ? Math.ceil(n / 2) : Math.floor(n / 2));
+    const all = caseData(k).map((_, i) => i);
+    let ids = shuffle(all.filter(i => !g[gk].seen.includes(i))).slice(0, need);
+    if (ids.length < need){ ids = ids.concat(shuffle(all.filter(i => !ids.includes(i))).slice(0, need - ids.length)); g[gk].seen = ids.slice(); }
+    else g[gk].seen = g[gk].seen.concat(ids);
+    pick = pick.concat(ids.map(i => [k, i]));
+  });
+  pick = shuffle(pick);
+  quiz = { mode:"case", set, setLabel:CASE_SETS[set].label, n, qs:pick.map(([k, i]) => makeCase(caseData(k)[i], k)), i:0, score:0, wrong:[], answered:false, last:null, done:false };
+  render();
+}
+function caseStat(set){
+  const key = set === "mix" ? "cmix" : caseKey(set), p = S.grammar && S.grammar[key], pools = CASE_SETS[set].pools;
+  const total = pools.reduce((a, k) => a + caseData(k).length, 0), seen = pools.reduce((a, k) => a + ((S.grammar && S.grammar[caseKey(k)] && S.grammar[caseKey(k)].seen.length) || 0), 0);
+  return `<div class="muted tiny" style="margin-top:4px">${CASE_SETS[set].label}: ${p && p.attempts ? `best ${p.best}/${p.bestTotal} · ${p.attempts} ${p.attempts === 1 ? "try" : "tries"}` : "not tried yet"} · seen ${Math.min(seen, total)}/${total}</div>`;
+}
+function viewCaseTopic(){
+  const n = ui.cq || 10, set = ui.cset || "def", total = CASE_SETS[set].pools.reduce((a, k) => a + caseData(k).length, 0);
+  const open = howOpen();
+  const how = `<div class="glass pad how">
+      <button class="hhead" onclick="toggleHow()" aria-expanded="${open}"><b>How it works</b><span class="hmore">${open ? "Hide" : "Show"} ${open ? "▴" : "▾"}</span></button>
+      ${open ? `<p class="muted tiny" style="margin:4px 0 10px">Every noun has a job. Ask two questions.</p>
+      <div class="hq"><span class="hn">1</span><p><b>Is the verb <i>sein</i>?</b> (ist, sind) → <span class="st">nominative</span>. Nothing changes.</p></div>
+      <div class="hq"><span class="hn">2</span><p><b>Otherwise ask “Wen oder was?”</b> → <span class="en">accusative</span>. Only masculine changes.</p></div>
+      <div class="hgrid">
+        <div><b>Nominative</b>der Hund<br>ein Hund<br><span class="muted tiny">das · die · plural</span></div>
+        <div><b>Accusative</b><span class="en">den</span> Hund<br><span class="en">einen</span> Hund<br><span class="muted tiny">das · die · plural: same</span></div></div>
+      <div class="heq">Ich habe + der Hund → Ich habe <span class="en">den</span> Hund</div>
+      <div class="hh">Memory tricks</div>
+      <ul><li><b>Only masculine gets an extra “n”:</b> der → de<b>n</b>, ein → eine<b>n</b>.</li>
+        <li><b>Sein is an equals sign:</b> Das ist der Hund. (Das = der Hund)</li>
+        <li><b>Doer or receiver:</b> Der Mann sieht den Hund. The man does the seeing, the dog receives it.</li>
+        <li><b>Say full sentences out loud.</b></li></ul>
+      <div class="hh">Examples</div>
+      <ul><li>Der Hund ist müde. (subject, nominative)</li>
+        <li>Ich habe <b>den</b> Hund. (object, accusative)</li>
+        <li>Wir kaufen <b>das</b> Auto. (das stays das)</li></ul>
+      <div class="hh">Watch out</div>
+      <div class="hwarn">Don't change die or das: <i>Ich sehe die Frau</i>, never <i>den Frau</i>.<br>Usually accusative: haben, brauchen, kaufen, sehen, essen, trinken, suchen, finden, nehmen, mögen, kennen.<br>The same pattern works for mein, dein, kein: mein Hund → <b>meinen</b> Hund.</div>` : ""}</div>`;
+  const rows = [["masculine (der)","der / ein","<b>den / einen</b>"],["neuter (das)","das / ein","das / ein"],["feminine (die)","die / eine","die / eine"],["plural","die","die"]];
+  return how + `<div class="glass pad mt"><b>All forms</b> <span class="muted">· nominative vs accusative</span>
+      <p class="muted tiny" style="margin:6px 0 10px">Only the masculine row changes.</p>
+      <table class="gt"><tr><th>Noun</th><th>Nominative</th><th>Accusative</th></tr>
+        ${rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join("")}</table></div>
+    <div class="glass pad mt"><b>Practice test</b> <span class="muted">· ${CASE_DEF.length + CASE_IND.length} sentences in 2 sets</span>
+      <label class="muted tiny" style="display:block;margin-top:10px">Practice set</label>
+      <select onchange="ui.cset=this.value;render()">${Object.keys(CASE_SETS).map(k => `<option value="${k}" ${k===set?"selected":""}>${CASE_SETS[k].label} · ${CASE_SETS[k].pools.reduce((a, q) => a + caseData(q).length, 0)} sentences</option>`).join("")}</select>
+      <div class="muted tiny" style="margin-top:6px">${CASE_SETS[set].info}</div>
+      <label class="muted tiny" style="display:block;margin-top:10px">Number of questions</label>
+      <select onchange="ui.cq=+this.value">${[10,15,20].map(k => `<option value="${k}" ${k===n?"selected":""}>${k} questions</option>`).join("")}</select>
+      <div class="row"><button class="btn" onclick="startCase(ui.cq||10, ui.cset||'def')">Start test</button></div>
+      <p class="muted tiny" style="margin-bottom:0">Pass mark 80 %. Random questions, unseen sentences first, so you see all ${total} before any repeat. The noun's gender is shown as a hint. Wrong answers get an explanation.</p>
+      <div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px">${caseStat("def")}${caseStat("ind")}${caseStat("mix")}</div></div>`;
+}
+
 /* Grammar tab: topic list on the left, selected topic on the right.
    To add a topic: write a viewXxxTopic() function and add one entry here. */
 const GRAMMAR_TOPICS = [
-  { id:"poss", title:"Possessive articles", sub:"mein, dein, sein…", view:viewPossTopic }
+  { id:"poss", title:"Possessive articles", sub:"mein, dein, sein…", view:viewPossTopic },
+  { id:"case", title:"Nominative vs Accusative", sub:"der → den, ein → einen", view:viewCaseTopic }
 ];
 function viewGrammar(){
   const cur = GRAMMAR_TOPICS.find(x => x.id === ui.gtopic) || GRAMMAR_TOPICS[0];
