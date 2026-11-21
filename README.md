@@ -18,6 +18,7 @@ Created by **Manish Kumar** · [LinkedIn](https://www.linkedin.com/in/manish-kum
   ich/du/er form. Pass mark 80 %. Day N unlocks only after Day N−1 is passed
 - **Practice** – meanings, plurals and a mixed review of older words plus your mistakes
 - **Grammar** – possessive articles (mein, dein, sein…) with 350 practice sentences in two sets: *Owner given* (200) and *In context* (150, e.g. "Peter hat einen Hund. Das ist ___ Hund."), or both mixed. Choose 10 / 15 / 20 random questions per test, unseen sentences first, explanation for every wrong answer
+- **Nominative vs Accusative** – der → den, ein → einen, with a "How it works" card and 150 practice sentences (definite 90, indefinite 60, or mixed)
 - **Progress** – XP, levels, streak, badges, per-day results, export/import of your progress
 - **Accounts** – email + password, email verification, password reset by email
 - **Admin view** – registered users and everyone's progress (admin only), CSV export
@@ -45,6 +46,7 @@ index.html              page shell, loads the files below in order
 css/style.css           themes (light/dark), layout, components
 js/words.js             the 30 days of words (edit here to change content)
 js/possessives.js       350 practice sentences for the Grammar tab (POSS 200 + POSS_CTX 150)
+js/cases.js             150 practice sentences: nominative vs accusative (CASE_DEF 90 + CASE_IND 60)
 js/firebase-config.js   Firebase keys, admin email, Firebase loader
 js/state.js             app state, helpers, quiz logic, XP/streak
 js/auth.js              login, register, password reset, saving progress
