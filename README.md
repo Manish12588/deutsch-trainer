@@ -19,6 +19,7 @@ Created by **Manish Kumar** · [LinkedIn](https://www.linkedin.com/in/manish-kum
 - **Practice** – meanings, plurals and a mixed review of older words plus your mistakes
 - **Grammar** – possessive articles (mein, dein, sein…) with 350 practice sentences in two sets: *Owner given* (200) and *In context* (150, e.g. "Peter hat einen Hund. Das ist ___ Hund."), or both mixed. Choose 10 / 15 / 20 random questions per test, unseen sentences first, explanation for every wrong answer
 - **Nominative vs Accusative** – der → den, ein → einen, with a "How it works" card and 150 practice sentences (definite 90, indefinite 60, or mixed)
+- **mögen & Lebensmittel** – conjugation (mag / magst / mögen / mögt), article or no article, Was or Wen, nicht or kein, word order in statements and questions, gern vs mögen with essen / trinken. 88 hand-written questions in 6 categories plus a mixed set
 - **Progress** – XP, levels, streak, badges, per-day results, export/import of your progress
 - **Accounts** – email + password, email verification, password reset by email
 - **Admin view** – registered users and everyone's progress (admin only), CSV export
@@ -50,6 +51,7 @@ js/cases.js             150 practice sentences: nominative vs accusative (CASE_D
 js/firebase-config.js   Firebase keys, admin email, Firebase loader
 js/state.js             app state, helpers, quiz logic, XP/streak
 js/auth.js              login, register, password reset, saving progress
+js/mogen.js             88 questions + topic screen: mögen & Lebensmittel (6 categories + mixed)
 js/views.js             all screens (Learn, Test, Progress, Admin)
 js/main.js              start-up
 firestore.rules         Firestore security rules (paste in Firebase console)
