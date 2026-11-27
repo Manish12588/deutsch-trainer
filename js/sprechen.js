@@ -1,31 +1,12 @@
 /* ===================================================================
    SPRECHEN – build German sentences from word tiles (Test tab > Sprechen)
-   Practice: pick a topic, 10 tasks per round (15 for the worksheet), tap the words in order.
+   Practice: pick a topic, 10 tasks per round, tap the words in order.
    Phrasebook: everyday phrases to memorise, grouped, with 🔊.
-   Topics: sheet (Arbeitsblatt 3, 15 sentences), phrases, verbs (A1 verbs), food (mögen, gern, kein), mix.
+   Topics: phrases, verbs (A1 verbs), daily life, food (mögen, gern, kein), mix.
    Task: { en: what to do, s: the German answer with punctuation, e: optional explanation, extra: wrong tiles }
    =================================================================== */
 const spPick = a => a[Math.floor(Math.random() * a.length)];
 const spCap = s => s.charAt(0).toUpperCase() + s.slice(1);
-
-/* ---- Arbeitsblatt 3: the 15 sentences from your worksheet [wrong sentence, correct sentence, why] ---- */
-const SP_SHEET = [
-  ["Ich mag ein Reis.", "Ich mag Reis.", "Food has no article when you say what you like."],
-  ["Er mögt Schokolade.", "Er mag Schokolade.", "er / sie / es → mag (not mögt). mögt is only for ihr."],
-  ["Ich esse gern Fleisch.", "Ich esse gern Fleisch.", "Already correct."],
-  ["Maria esst gern Nudeln.", "Maria isst gern Nudeln.", "essen: er / sie isst (e → i)."],
-  ["Ich mag nicht Tomaten.", "Ich mag keine Tomaten.", "No article + noun: use kein-, not nicht. Plural → keine."],
-  ["Die Bananen kostet 1,89 €.", "Die Bananen kosten 1,89 €.", "Plural subject → kosten."],
-  ["Ich mag gern Kaffee.", "Ich mag Kaffee.", "mögen already means like. Do not add gern."],
-  ["Wir mögen Äpfel.", "Wir mögen Äpfel.", "Already correct."],
-  ["Wie viel kostet die Eier?", "Wie viel kosten die Eier?", "Eier is plural → kosten."],
-  ["Ich mag kein Bananen.", "Ich mag keine Bananen.", "Plural → keine."],
-  ["Ich isst gern Salat.", "Ich esse gern Salat.", "ich → esse."],
-  ["Was magst du? Ich mag Akiko.", "Wen magst du? Ich mag Akiko.", "Akiko is a person → Wen. Things and food → Was."],
-  ["Wen magst du? Ich mag Frankfurt.", "Was magst du? Ich mag Frankfurt.", "Frankfurt is a place, not a person → Was."],
-  ["Du magst Bananen? Ja, ich mag Bananen.", "Magst du Bananen? Ja, ich mag Bananen.", "A yes/no question starts with the verb."],
-  ["2,59 €: zwei Komma neunundfünfzig Euro", "2,59 €: zwei Euro neunundfünfzig", "Say the euros, then the cents: zwei Euro neunundfünfzig."]
-].map(([wrong, s, e]) => ({ en: wrong === s ? `Fix it if it is wrong: "${wrong}"` : `Fix the sentence: "${wrong}"`, s, e }));
 
 /* ---- Everyday phrases: [group, English, German] ---- */
 const SP_PHRASES = [
@@ -98,6 +79,22 @@ function spPriceTask(){
   return { en:`Ask: How much ${pl ? "do" : "does"} the ${en} cost?`, s:`Wie viel ${pl ? "kosten" : "kostet"} ${a} ${n}?` };
 }
 
+/* ---- Daily life: my own A1 sentences (café, family, time, places, weather, hobbies, can / must) ---- */
+const SP_DAILY = [
+  ["I would like a tea, please.","Ich möchte einen Tee, bitte."],["The bill, please.","Die Rechnung, bitte."],["Do you have a table for two?","Haben Sie einen Tisch für zwei?"],
+  ["What would you like?","Was möchten Sie?"],["I would like to pay.","Ich möchte bezahlen."],["The soup is hot.","Die Suppe ist heiß."],
+  ["This is my sister.","Das ist meine Schwester."],["I have two brothers.","Ich habe zwei Brüder."],["My mother is a doctor.","Meine Mutter ist Ärztin."],
+  ["Do you have children?","Haben Sie Kinder?"],["How old are you?","Wie alt bist du?"],["I am twenty years old.","Ich bin zwanzig Jahre alt."],
+  ["It is nine o'clock.","Es ist neun Uhr."],["Today is Monday.","Heute ist Montag."],["See you on Friday!","Bis Freitag!"],
+  ["I get up at seven.","Ich stehe um sieben Uhr auf."],["I work from Monday to Friday.","Ich arbeite von Montag bis Freitag."],["The lesson starts at nine.","Der Unterricht beginnt um neun Uhr."],
+  ["Where is the station?","Wo ist der Bahnhof?"],["Is there a supermarket here?","Gibt es hier einen Supermarkt?"],["I am going to the supermarket.","Ich gehe zum Supermarkt."],
+  ["The bus stop is on the right.","Die Haltestelle ist rechts."],["Go straight ahead.","Gehen Sie geradeaus."],
+  ["The weather is nice today.","Das Wetter ist heute schön."],["It is cold.","Es ist kalt."],["I like reading.","Ich lese gern."],
+  ["I play football on Sundays.","Ich spiele sonntags Fußball."],["Do you like music?","Magst du Musik?"],
+  ["Can you speak slowly?","Können Sie langsam sprechen?"],["I can swim.","Ich kann schwimmen."],["I have to learn German.","Ich muss Deutsch lernen."],
+  ["Can I ask a question?","Kann ich eine Frage stellen?"],["I would like to learn German.","Ich möchte Deutsch lernen."],["The apartment is big.","Die Wohnung ist groß."]
+].map(([en, s]) => ({ en: `Say in German: ${en}`, s }));
+
 /* ---- Food and mögen ---- */
 const SP_FOOD = [
   ["Reis","rice","eat","m"],["Fisch","fish","eat","m"],["Käse","cheese","eat","m"],["Salat","salad","eat","m"],["Kuchen","cake","eat","m"],["Joghurt","yogurt","eat","m"],
@@ -120,20 +117,20 @@ function spFoodTask(){
 
 /* ---- Topics ---- */
 const SP_TOPICS = {
-  sheet:   { label:"Worksheet: richtig oder falsch", info:"The 15 sentences from your Arbeitsblatt 3. Build each one correctly. Two are already right.", n:15 },
   phrases: { label:"Everyday phrases",               info:"Greetings, politeness, shopping, food. Short phrases to memorise.", n:10 },
   verbs:   { label:"A1 verbs",                       info:"wohnen, kommen, lernen, arbeiten, sprechen, kaufen, brauchen, essen, trinken, haben, mögen, plus questions with du and Sie.", n:10 },
+  daily:   { label:"Daily life",                     info:"Café, family, time, places, weather, hobbies, können and müssen.", n:10 },
   food:    { label:"Food and mögen",                 info:"mögen, gern, kein, and price questions.", n:10 },
   mix:     { label:"Mixed",                          info:"A bit of everything.", n:10 }
 };
 function spMake(topic){
   if (topic === "phrases") return spPick(SP_PHRASE_TASKS);
+  if (topic === "daily")   return spPick(SP_DAILY);
   if (topic === "verbs")   return Math.random() < 0.7 ? spVerbTask() : spPick(SP_BASIC);
   if (topic === "food")    return Math.random() < 0.15 ? spPriceTask() : spFoodTask();
-  return spMake(spPick(["phrases","verbs","food"]));      // mix
+  return spMake(spPick(["phrases","verbs","daily","food"]));      // mix
 }
 function spBuild(topic){
-  if (topic === "sheet") return shuffle(SP_SHEET.slice());
   const qs = [], seen = new Set(); let guard = 0;
   while (qs.length < SP_TOPICS[topic].n && guard++ < 400){ const it = spMake(topic); if (!seen.has(it.s)){ seen.add(it.s); qs.push(it); } }
   return qs;
@@ -147,7 +144,7 @@ function spTiles(it){
 /* ---- Round state and actions ---- */
 let sp = null;
 function spStart(topic){
-  topic = SP_TOPICS[topic] ? topic : "sheet"; ui.spCat = topic; ui.spSec = "practice";
+  topic = SP_TOPICS[topic] ? topic : "phrases"; ui.spCat = topic; ui.spSec = "practice";
   const qs = spBuild(topic);
   sp = { topic, qs, i:0, score:0, built:[], pool:spTiles(qs[0]), checked:false, ok:false, done:false, wrong:[] };
   render();
@@ -159,6 +156,7 @@ function spTap(id){
   else { const k = sp.built.findIndex(t => t.id === id); if (k >= 0) sp.pool.push(sp.built.splice(k, 1)[0]); }
   render();
 }
+function spQuit(){ sp = null; render(); }
 function spClear(){ if (!sp || sp.checked) return; sp.pool = sp.pool.concat(sp.built); sp.built = []; render(); }
 function spCheck(){
   if (!sp || sp.checked || !sp.built.length) return;
@@ -184,7 +182,7 @@ function spStat(k){
   return `<div class="muted tiny" style="margin-top:4px">${SP_TOPICS[k].label}: ${p && p.attempts ? `best ${p.best}/${p.bestTotal} · ${p.attempts} ${p.attempts === 1 ? "try" : "tries"}` : "not tried yet"}</div>`;
 }
 function viewSpPractice(){
-  const cat = SP_TOPICS[ui.spCat] ? ui.spCat : "sheet";
+  const cat = SP_TOPICS[ui.spCat] ? ui.spCat : "phrases";
   if (!sp) return `<div class="glass pad"><b>Build the sentence</b>
       <p class="muted">You get a task in English, or a sentence to fix. Tap the German words in the right order. Pass mark 80 %.</p>
       <label class="muted tiny" style="display:block;margin-top:10px">Topic</label>
@@ -202,14 +200,18 @@ function viewSpPractice(){
       <div style="min-height:52px;border:1px dashed var(--line);border-radius:12px;padding:6px;margin-bottom:8px">${sp.built.map(tile).join("") || '<span class="muted tiny">Tap the words below</span>'}</div>
       <div>${sp.pool.map(tile).join("")}</div>
       ${sp.checked ? `<div class="fb ${sp.ok ? "ok" : "bad"}" style="margin-top:10px">${sp.ok ? "Richtig! ✓" : "Not quite."} <b>${esc(it.s)}</b> ${sayBtn(it.s)}${it.e ? `<div class="tiny" style="margin-top:4px">${esc(it.e)}</div>` : ""}</div>
-        <div class="row"><button class="btn" onclick="spNext()">${sp.i + 1 >= sp.qs.length ? "Finish" : "Next"}</button></div>`
-      : `<div class="row"><button class="btn" onclick="spCheck()">Check</button><button class="btn alt" onclick="spClear()">Clear</button></div>`}</div>`;
+        <div class="row"><button class="btn" onclick="spNext()">${sp.i + 1 >= sp.qs.length ? "Finish" : "Next"}</button><button class="btn alt" onclick="spQuit()">Quit</button></div>`
+      : `<div class="row"><button class="btn" onclick="spCheck()">Check</button><button class="btn alt" onclick="spClear()">Clear</button><button class="btn alt" onclick="spQuit()">Quit</button></div>`}</div>`;
 }
+function spToggle(i){ ui.spOpen = ui.spOpen || {}; ui.spOpen[i] = !ui.spOpen[i]; render(); }
+function spAll(open){ const n = new Set(SP_PHRASES.map(p => p[0])).size; ui.spOpen = {}; for (let i = 0; i < n; i++) ui.spOpen[i] = open; render(); }
 function viewSpBook(){
-  const groups = [...new Set(SP_PHRASES.map(p => p[0]))];
-  return groups.map(g => `<div class="glass pad mt"><b>${g}</b>
-      <table class="gt" style="margin-top:6px"><tr><th>German</th><th>English</th><th></th></tr>
-        ${SP_PHRASES.filter(p => p[0] === g).map(p => `<tr><td style="color:inherit"><b>${esc(p[2])}</b></td><td>${esc(p[1])}</td><td>${sayBtn(p[2])}</td></tr>`).join("")}</table></div>`).join("");
+  const groups = [...new Set(SP_PHRASES.map(p => p[0]))], open = ui.spOpen || {};
+  return `<div class="row" style="margin:0 0 4px"><button class="btn alt" onclick="spAll(true)">Expand all</button><button class="btn alt" onclick="spAll(false)">Collapse all</button></div>` +
+    groups.map((g, i) => { const rows = SP_PHRASES.filter(p => p[0] === g), o = !!open[i];
+      return `<div class="glass pad mt"><button class="hhead" onclick="spToggle(${i})" aria-expanded="${o}"><b>${g}</b><span class="hmore">${rows.length} phrases ${o ? "▴" : "▾"}</span></button>
+        ${o ? `<table class="gt" style="margin-top:6px"><tr><th>German</th><th>English</th><th></th></tr>
+          ${rows.map(p => `<tr><td style="color:inherit"><b>${esc(p[2])}</b></td><td>${esc(p[1])}</td><td>${sayBtn(p[2])}</td></tr>`).join("")}</table>` : ""}</div>`; }).join("");
 }
 function viewSprechen(){
   const m = ui.spSec === "book" ? "book" : "practice";
