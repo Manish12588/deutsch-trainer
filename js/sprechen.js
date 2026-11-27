@@ -1,9 +1,12 @@
 /* ===================================================================
    SPRECHEN – build German sentences from word tiles (Test tab > Sprechen)
-   Practice: pick a topic, 10 tasks per round, tap the words in order.
-   Phrasebook: everyday phrases to memorise, grouped, with 🔊.
-   Topics: phrases, verbs (A1 verbs), daily life, food (mögen, gern, kein), mix.
-   Task: { en: what to do, s: the German answer with punctuation, e: optional explanation, extra: wrong tiles }
+   One bank of 200+ sentences (everyday phrases, daily life, A1 verbs, food and mögen).
+   Each round draws 15. Every sentence has a stable id, the ones you have checked are saved,
+   and unseen sentences come first (same idea as the Prüfung). A new round starts when all are seen.
+   Besides the right words, the tile pool contains wrong verb forms and wrong articles
+   (for example kommt / kommen / komme, or ein / eine / einen), so you must choose.
+   Phrasebook: everyday phrases to memorise, in collapsible groups, with 🔊.
+   Task: { id, en: what to do, s: the German answer with punctuation, e: optional explanation }
    =================================================================== */
 const spPick = a => a[Math.floor(Math.random() * a.length)];
 const spCap = s => s.charAt(0).toUpperCase() + s.slice(1);
@@ -50,15 +53,6 @@ const SP_SUBJ = [
   { de:"ihr", en:"you all", i:4 }, { de:"sie", en:"they", i:5 }
 ];
 const SP_NAMES = ["Arul","Anna","Mehmet","Lena","Ravi","Sara"];
-function spVerbTask(){
-  const v = spPick(SP_VERBS), c = spPick(v.c), r = Math.random();
-  if (r < 0.5){
-    const s = Math.random() < 0.3 ? { de:spPick(SP_NAMES), i:2, t:1 } : spPick(SP_SUBJ), en = s.en || s.de;
-    return { en:`Say: ${spCap(en)} ${s.t ? v.e3 : v.e} ${c[1]}.`, s:`${spCap(s.de)} ${v.f[s.i]} ${c[0]}.` };
-  }
-  if (r < 0.8) return { en:`Ask a friend: Do you ${v.e} ${c[1]}?`, s:`${spCap(v.f[1])} du ${c[0]}?` };
-  return { en:`Ask politely: Do you ${v.e} ${c[1]}?`, s:`${spCap(v.f[5])} Sie ${c[0]}?` };
-}
 /* fixed A1 sentences about you, work and things (from the Lektion 1 and 2 worksheets) */
 const SP_BASIC = [
   ["Ask a friend: What is your name?","Wie heißt du?"],["Ask politely: What is your name?","Wie heißen Sie?"],
@@ -74,11 +68,6 @@ const SP_BASIC = [
 ].map(([en, s]) => ({ en, s }));
 const SP_PRICES = [["die","Butter","butter"],["das","Brot","bread"],["die","Milch","milk"],["das","Wasser","water"],["der","Käse","cheese"],["der","Kaffee","coffee"],
   ["die","Tomaten","tomatoes",1],["die","Äpfel","apples",1],["die","Bananen","bananas",1],["die","Eier","eggs",1],["die","Nudeln","noodles",1],["die","Kartoffeln","potatoes",1]];
-function spPriceTask(){
-  const [a, n, en, pl] = spPick(SP_PRICES);
-  return { en:`Ask: How much ${pl ? "do" : "does"} the ${en} cost?`, s:`Wie viel ${pl ? "kosten" : "kostet"} ${a} ${n}?` };
-}
-
 /* ---- Daily life: my own A1 sentences (café, family, time, places, weather, hobbies, can / must) ---- */
 const SP_DAILY = [
   ["I would like a tea, please.","Ich möchte einen Tee, bitte."],["The bill, please.","Die Rechnung, bitte."],["Do you have a table for two?","Haben Sie einen Tisch für zwei?"],
@@ -104,36 +93,60 @@ const SP_FOOD = [
   ["Wasser","water","drink","n"],["Bier","beer","drink","n"],["Tee","tea","drink","m"],["Kaffee","coffee","drink","m"],["Saft","juice","drink","m"],["Wein","wine","drink","m"],
   ["Milch","milk","drink","f"],["Cola","cola","drink","f"]
 ].map(([de, en, kind, g]) => ({ de, en, kind, g, kein: g === "m" ? "keinen" : g === "n" ? "kein" : "keine" }));
-function spFoodTask(){
-  const f = spPick(SP_FOOD), eat = f.kind === "eat", t = spPick(["ask","mag","neg","neggern","report","open"]);
-  if (t === "ask")     return { en:`Ask: Do you like ${eat ? "eating" : "drinking"} ${f.en}?`, s:`${eat ? "Isst" : "Trinkst"} du gern ${f.de}?` };
-  if (t === "mag")     return { en:`Ask: Do you like ${f.en}?`, s:`Magst du ${f.de}?` };
-  if (t === "neg")     return { en:`Say: I don't like ${f.en}.`, s:`Ich mag ${f.kein} ${f.de}.`, extra:[spPick(["kein","keine","keinen"].filter(x => x !== f.kein))], e:"kein for das words, keinen for der words, keine for die words and plurals." };
-  if (t === "neggern") return { en:`Say: I don't like ${eat ? "eating" : "drinking"} ${f.en}.`, s:`Ich ${eat ? "esse" : "trinke"} nicht gern ${f.de}.` };
-  if (t === "report"){ const n = spPick(SP_NAMES); return { en:`Report: ${n} likes ${eat ? "eating" : "drinking"} ${f.en}.`, s:`${n} ${eat ? "isst" : "trinkt"} gern ${f.de}.` }; }
-  return spPick([{ en:"Ask: What do you like eating?", s:"Was isst du gern?" }, { en:"Ask: What do you like drinking?", s:"Was trinkst du gern?" },
-    { en:"Ask: What do you like?", s:"Was magst du?" }, { en:"Ask: What don't you like?", s:"Was magst du nicht?" }]);
+/* ---- Build the bank (deterministic, so the ids stay stable) ---- */
+const spHash = x => { let h = 5381; for (let i = 0; i < x.length; i++) h = ((h << 5) + h + x.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };
+function spBankBuild(){
+  const out = [];
+  SP_PHRASE_TASKS.forEach(t => out.push(t));
+  SP_DAILY.forEach(t => out.push(t));
+  SP_BASIC.forEach(t => out.push(t));
+  SP_VERBS.forEach((v, vi) => {                                   // 7 sentences per verb, complements rotate
+    const c = k => v.c[(vi * 2 + k) % v.c.length], name = k => SP_NAMES[(vi + k) % SP_NAMES.length];
+    const st = (subj, en, i, third, k) => out.push({ en:`Say: ${spCap(en)} ${third ? v.e3 : v.e} ${c(k)[1]}.`, s:`${spCap(subj)} ${v.f[i]} ${c(k)[0]}.`, e:`${subj} → ${v.f[i]}` });
+    st("ich", "I", 0, 0, 0); st(name(0), name(0), 2, 1, 1); st("wir", "we", 3, 0, 2); st("ihr", "you all", 4, 0, 3); st("er", "he", 2, 1, 4);
+    out.push({ en:`Ask a friend: Do you ${v.e} ${c(5)[1]}?`, s:`${spCap(v.f[1])} du ${c(5)[0]}?`, e:`du → ${v.f[1]}` });
+    out.push({ en:`Ask politely: Do you ${v.e} ${c(6)[1]}?`, s:`${spCap(v.f[5])} Sie ${c(6)[0]}?`, e:`Sie → ${v.f[5]}` });
+  });
+  SP_FOOD.forEach((f, i) => {                                      // one food sentence per word, type rotates
+    const eat = f.kind === "eat", t = i % 5;
+    if (t === 0) out.push({ en:`Ask: Do you like ${eat ? "eating" : "drinking"} ${f.en}?`, s:`${eat ? "Isst" : "Trinkst"} du gern ${f.de}?` });
+    if (t === 1) out.push({ en:`Say: I don't like ${f.en}.`, s:`Ich mag ${f.kein} ${f.de}.`, e:"kein for das words, keinen for der words, keine for die words and plurals." });
+    if (t === 2) out.push({ en:`Ask: Do you like ${f.en}?`, s:`Magst du ${f.de}?` });
+    if (t === 3) out.push({ en:`Say: I don't like ${eat ? "eating" : "drinking"} ${f.en}.`, s:`Ich ${eat ? "esse" : "trinke"} nicht gern ${f.de}.` });
+    if (t === 4) out.push({ en:`Report: ${SP_NAMES[i % SP_NAMES.length]} likes ${eat ? "eating" : "drinking"} ${f.en}.`, s:`${SP_NAMES[i % SP_NAMES.length]} ${eat ? "isst" : "trinkt"} gern ${f.de}.` });
+  });
+  [{ en:"Ask: What do you like eating?", s:"Was isst du gern?" }, { en:"Ask: What do you like drinking?", s:"Was trinkst du gern?" },
+   { en:"Ask: What do you like?", s:"Was magst du?" }, { en:"Ask: What don't you like?", s:"Was magst du nicht?" },
+   { en:"Ask: Whom do you like?", s:"Wen magst du?" }].forEach(t => out.push(t));
+  SP_PRICES.forEach(([a, n, en, pl]) => out.push({ en:`Ask: How much ${pl ? "do" : "does"} the ${en} cost?`, s:`Wie viel ${pl ? "kosten" : "kostet"} ${a} ${n}?`, e:pl ? "Plural → kosten" : "Singular → kostet" }));
+  const seen = new Set();
+  return out.filter(t => !seen.has(t.s) && seen.add(t.s)).map(t => ({ ...t, id:spHash(t.s) }));
 }
+const SP_BANK = spBankBuild();
 
-/* ---- Topics ---- */
-const SP_TOPICS = {
-  phrases: { label:"Everyday phrases",               info:"Greetings, politeness, shopping, food. Short phrases to memorise.", n:10 },
-  verbs:   { label:"A1 verbs",                       info:"wohnen, kommen, lernen, arbeiten, sprechen, kaufen, brauchen, essen, trinken, haben, mögen, plus questions with du and Sie.", n:10 },
-  daily:   { label:"Daily life",                     info:"Café, family, time, places, weather, hobbies, können and müssen.", n:10 },
-  food:    { label:"Food and mögen",                 info:"mögen, gern, kein, and price questions.", n:10 },
-  mix:     { label:"Mixed",                          info:"A bit of everything.", n:10 }
-};
-function spMake(topic){
-  if (topic === "phrases") return spPick(SP_PHRASE_TASKS);
-  if (topic === "daily")   return spPick(SP_DAILY);
-  if (topic === "verbs")   return Math.random() < 0.7 ? spVerbTask() : spPick(SP_BASIC);
-  if (topic === "food")    return Math.random() < 0.15 ? spPriceTask() : spFoodTask();
-  return spMake(spPick(["phrases","verbs","daily","food"]));      // mix
-}
-function spBuild(topic){
-  const qs = [], seen = new Set(); let guard = 0;
-  while (qs.length < SP_TOPICS[topic].n && guard++ < 400){ const it = spMake(topic); if (!seen.has(it.s)){ seen.add(it.s); qs.push(it); } }
-  return qs;
+/* ---- Wrong tiles: other forms of the same verb, other articles ---- */
+const SP_CONFUSE = (() => {
+  const groups = [["der","die","das","den","dem"],["ein","eine","einen"],["kein","keine","keinen"],["mein","meine"],["dein","deine"],["sein","seine"],["ihr","ihre"],["unser","unsere"],["euer","eure"],
+    ["bin","bist","ist","sind","seid"],["möchte","möchtest","möchten","möchtet"],["kann","kannst","können","könnt"],["muss","musst","müssen","müsst"],
+    ["gehe","gehst","geht","gehen"],["heiße","heißt","heißen"],["lese","liest","lesen"],["spiele","spielst","spielt","spielen"],["stehe","stehst","steht","stehen"],
+    ["beginne","beginnst","beginnt","beginnen"],["kostet","kosten"],["verstehe","verstehst","versteht","verstehen"],["weiß","weißt","wissen"],["Wo","Woher","Wie","Was","Wen"],["gibt","geben"]];
+  SP_VERBS.forEach(v => groups.push([...new Set(v.f)]));
+  const map = {}; groups.forEach(g => g.forEach(w => { (map[w.toLowerCase()] = map[w.toLowerCase()] || []).push(g); }));
+  return map;
+})();
+function spExtras(it){
+  const toks = it.s.split(" "), have = new Set(toks.map(t => t.replace(/[.,!?:]+$/, "").toLowerCase())), cands = [];
+  toks.forEach(t => {
+    const core = t.replace(/[.,!?:]+$/, ""), low = core.toLowerCase(), tail = t.slice(core.length), gs = SP_CONFUSE[low];
+    if (!gs) return;
+    const upper = core[0] !== core[0].toLowerCase();
+    const wrong = [...new Set(gs.flat().map(w => w.toLowerCase()))].filter(w => w !== low && !have.has(w));
+    if (wrong.length) cands.push(shuffle(wrong).map(w => (upper ? spCap(w) : w) + tail));
+  });
+  const out = [];
+  shuffle(cands).forEach(c => { const w = c.find(x => !out.includes(x)); if (w && out.length < 4) out.push(w); });
+  shuffle(cands).forEach(c => { const w = c.find(x => !out.includes(x)); if (w && out.length < 3) out.push(w); });
+  return out;
 }
 function spTiles(it){
   const words = it.s.split(" ").concat(it.extra || []);
@@ -142,13 +155,21 @@ function spTiles(it){
 }
 
 /* ---- Round state and actions ---- */
+const SP_N = 15;
 let sp = null;
-function spStart(topic){
-  topic = SP_TOPICS[topic] ? topic : "phrases"; ui.spCat = topic; ui.spSec = "practice";
-  const qs = spBuild(topic);
-  sp = { topic, qs, i:0, score:0, built:[], pool:spTiles(qs[0]), checked:false, ok:false, done:false, wrong:[] };
+function spRec(){ const g = (S.grammar = S.grammar || {}); g.s_all = g.s_all || { attempts:0, best:0, bestTotal:0, seen:[] }; return g.s_all; }
+function spStart(){
+  const rec = spRec(), valid = new Set(SP_BANK.map(q => q.id));
+  rec.seen = (rec.seen || []).filter(x => valid.has(x));
+  const unseen = SP_BANK.filter(q => !rec.seen.includes(q.id)); let chosen;
+  if (unseen.length >= SP_N) chosen = shuffle(unseen).slice(0, SP_N);
+  else { chosen = unseen.concat(shuffle(SP_BANK.filter(q => !unseen.includes(q))).slice(0, SP_N - unseen.length)); rec.rounds = (rec.rounds || 1) + 1; rec.seen = []; }
+  const qs = shuffle(chosen).map(q => ({ ...q, extra:spExtras(q) }));
+  ui.spSec = "practice";
+  sp = { qs, i:0, score:0, built:[], pool:spTiles(qs[0]), checked:false, ok:false, done:false, wrong:[] };
   render();
 }
+function spQuit(){ sp = null; render(); }
 function spTap(id){
   if (!sp || sp.checked) return;
   const a = sp.pool.findIndex(t => t.id === id);
@@ -156,19 +177,19 @@ function spTap(id){
   else { const k = sp.built.findIndex(t => t.id === id); if (k >= 0) sp.pool.push(sp.built.splice(k, 1)[0]); }
   render();
 }
-function spQuit(){ sp = null; render(); }
 function spClear(){ if (!sp || sp.checked) return; sp.pool = sp.pool.concat(sp.built); sp.built = []; render(); }
 function spCheck(){
   if (!sp || sp.checked || !sp.built.length) return;
-  const it = sp.qs[sp.i], got = sp.built.map(t => t.w).join(" ");
+  const it = sp.qs[sp.i], got = sp.built.map(t => t.w).join(" "), rec = spRec();
   sp.checked = true; sp.ok = got.toLowerCase() === it.s.toLowerCase();
+  if (!rec.seen.includes(it.id)) rec.seen.push(it.id);
   if (sp.ok) sp.score++; else sp.wrong.push({ en:it.en, right:it.s, got, e:it.e });
   render();
 }
 function spNext(){
   if (sp.i + 1 >= sp.qs.length){
     sp.done = true; sp.need = Math.ceil(sp.qs.length * PASS_RATIO); sp.passed = sp.score >= sp.need;
-    const key = "s_" + sp.topic, p = (S.grammar[key] = S.grammar[key] || { attempts:0, best:0, bestTotal:0, seen:[] }); p.attempts++;
+    const p = spRec(); p.attempts++;
     if (!p.bestTotal || sp.score / sp.qs.length >= p.best / p.bestTotal){ p.best = sp.score; p.bestTotal = sp.qs.length; }
     if (sp.passed) S.xp += 20;
     S.days[localDate()] = true; save();
@@ -177,28 +198,26 @@ function spNext(){
 }
 
 /* ---- Views ---- */
-function spStat(k){
-  const p = S.grammar && S.grammar["s_" + k];
-  return `<div class="muted tiny" style="margin-top:4px">${SP_TOPICS[k].label}: ${p && p.attempts ? `best ${p.best}/${p.bestTotal} · ${p.attempts} ${p.attempts === 1 ? "try" : "tries"}` : "not tried yet"}</div>`;
+function spStat(){
+  const p = spRec(), valid = new Set(SP_BANK.map(q => q.id)), seen = (p.seen || []).filter(x => valid.has(x)).length, pct = Math.round(seen / SP_BANK.length * 100);
+  return `<div class="muted tiny" style="margin-top:10px">Seen <b>${seen} / ${SP_BANK.length}</b> sentences${p.rounds > 1 ? " · round " + p.rounds : ""}</div>
+    <div class="bar" style="margin:4px 0 6px"><div style="width:${pct}%"></div></div>
+    <div class="muted tiny">${p.attempts ? `Best ${p.best}/${p.bestTotal} · ${p.attempts} ${p.attempts === 1 ? "try" : "tries"}` : "Not tried yet"} · new sentences come first, a new round starts when all are seen</div>`;
 }
 function viewSpPractice(){
-  const cat = SP_TOPICS[ui.spCat] ? ui.spCat : "phrases";
-  if (!sp) return `<div class="glass pad"><b>Build the sentence</b>
-      <p class="muted">You get a task in English, or a sentence to fix. Tap the German words in the right order. Pass mark 80 %.</p>
-      <label class="muted tiny" style="display:block;margin-top:10px">Topic</label>
-      <select onchange="ui.spCat=this.value;render()">${Object.keys(SP_TOPICS).map(k => `<option value="${k}" ${k===cat?"selected":""}>${SP_TOPICS[k].label}</option>`).join("")}</select>
-      <div class="muted tiny" style="margin-top:6px">${SP_TOPICS[cat].info}</div>
-      <div class="row"><button class="btn" onclick="spStart('${cat}')">Start · ${SP_TOPICS[cat].n} tasks</button></div>
-      <div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px">${Object.keys(SP_TOPICS).map(spStat).join("")}</div></div>`;
+  if (!sp) return `<div class="glass pad"><b>Build the sentence</b> <span class="muted">· ${SP_N} random tasks from ${SP_BANK.length}</span>
+      <p class="muted tiny" style="margin:6px 0 0">You get a task in English. Tap the German words in the right order. The tiles also contain <b>wrong verb forms and wrong articles</b>, so pick carefully. Topics are mixed: everyday phrases, daily life, A1 verbs, food and mögen. Pass mark 80 %.</p>
+      <div class="row"><button class="btn" onclick="spStart()">Start</button></div>${spStat()}</div>`;
   if (sp.done) return `<div class="glass pad"><div class="big">${sp.score} / ${sp.qs.length}</div>
       <div class="fb ${sp.passed ? "ok" : "bad"}">${sp.passed ? "Stark! ✓ Pass mark reached. +20 XP" : `Need ${sp.need}/${sp.qs.length} to pass. Check the answers below and try again.`}</div>
       ${sp.wrong.length ? `<div class="hh">Review</div>${sp.wrong.map(w => `<div class="hq"><p>${esc(w.en)}<br><span class="muted">You: ${esc(w.got)}</span><br><b>${esc(w.right)}</b> ${sayBtn(w.right)}${w.e ? `<br><span class="muted tiny">${esc(w.e)}</span>` : ""}</p></div>`).join("")}` : ""}
-      <div class="row"><button class="btn" onclick="spStart('${sp.topic}')">New round</button><button class="btn alt" onclick="sp=null;render()">Close</button></div></div>`;
+      <div class="row"><button class="btn" onclick="spStart()">New round</button><button class="btn alt" onclick="sp=null;render()">Close</button></div>${spStat()}</div>`;
   const it = sp.qs[sp.i], tile = t => `<button class="opt" style="width:auto;display:inline-block;margin:4px" onclick="spTap(${t.id})">${esc(t.w)}</button>`;
-  return `<div class="glass pad"><div class="muted tiny">${esc(SP_TOPICS[sp.topic].label)} · ${sp.i + 1} / ${sp.qs.length} · score ${sp.score}</div>
+  return `<div class="glass pad"><div class="muted tiny">${sp.i + 1} / ${sp.qs.length} · score ${sp.score}</div>
       <div class="big" style="margin:10px 0">${esc(it.en)}</div>
       <div style="min-height:52px;border:1px dashed var(--line);border-radius:12px;padding:6px;margin-bottom:8px">${sp.built.map(tile).join("") || '<span class="muted tiny">Tap the words below</span>'}</div>
       <div>${sp.pool.map(tile).join("")}</div>
+      <div class="muted tiny" style="margin-top:6px">Some tiles are wrong forms. Do not use them.</div>
       ${sp.checked ? `<div class="fb ${sp.ok ? "ok" : "bad"}" style="margin-top:10px">${sp.ok ? "Richtig! ✓" : "Not quite."} <b>${esc(it.s)}</b> ${sayBtn(it.s)}${it.e ? `<div class="tiny" style="margin-top:4px">${esc(it.e)}</div>` : ""}</div>
         <div class="row"><button class="btn" onclick="spNext()">${sp.i + 1 >= sp.qs.length ? "Finish" : "Next"}</button><button class="btn alt" onclick="spQuit()">Quit</button></div>`
       : `<div class="row"><button class="btn" onclick="spCheck()">Check</button><button class="btn alt" onclick="spClear()">Clear</button><button class="btn alt" onclick="spQuit()">Quit</button></div>`}</div>`;
