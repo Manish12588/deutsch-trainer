@@ -117,7 +117,7 @@ function cardMove(n){ ui.cardI = (ui.cardI + n + ui.deck.length) % ui.deck.lengt
 function toggleLearned(day){ S.learned[day] = !S.learned[day]; if (S.learned[day]) S.days[localDate()] = true; save(); render(); }
 
 /* ---------- TEST ---------- */
-function viewCheck(){
+function viewVocabTest(){      // the Test tab wrapper viewCheck() is in pruefung.js
   if (ui.checkIdx === null) ui.checkIdx = firstOpenDay();
   const i = ui.checkIdx, d = DAYS[i], open = dayUnlocked(i), t = S.tests[d.day];
   return `<div class="glass pad"><b>Day test</b> <span class="muted">· pass with 8 / 10 to unlock the next day</span>
@@ -174,13 +174,13 @@ function startQuiz(mode){
 
 function viewQuiz(){
   if (quiz.done) return viewResult();
-  const q = quiz.qs[quiz.i], title = { test:`Day ${quiz.day} test`, meanings:"Meanings", plurals:"Plurals", review:"Review mix", poss:"Possessives · " + (quiz.setLabel || ""), case:"Cases · " + (quiz.setLabel || ""), mogen:"mögen · " + (quiz.setLabel || "") }[quiz.mode];
+  const q = quiz.qs[quiz.i], title = { test:`Day ${quiz.day} test`, meanings:"Meanings", plurals:"Plurals", review:"Review mix", poss:"Possessives · " + (quiz.setLabel || ""), case:"Cases · " + (quiz.setLabel || ""), mogen:"mögen · " + (quiz.setLabel || ""), pruef:"Prüfung · " + (quiz.setLabel || "") }[quiz.mode];
   let h = `<div class="muted" style="display:flex;justify-content:space-between"><span>${title}</span><span>${quiz.i+1} / ${quiz.qs.length}</span></div>
     <div class="bar"><div style="width:${quiz.i / quiz.qs.length * 100}%"></div></div>
     <div class="glass q"><div class="big">${q.prompt}</div>${q.hint ? `<div class="muted">${esc(q.hint)}</div>` : ""}`;
   if (q.type === "choice"){
     h += q.options.map(o => {
-      let c = ""; if (quiz.answered) c = norm(o) === norm(q.answer) ? "right" : (quiz.last === o ? "wrong" : "");
+      let c = ""; if (quiz.answered) c = quiz.mode === "pruef" ? (quiz.last === o ? "picked" : "") : norm(o) === norm(q.answer) ? "right" : (quiz.last === o ? "wrong" : "");   // Prüfung: no right/wrong until the end
       return `<button class="opt ${c}" ${quiz.answered?"disabled":""} data-v="${esc(o)}" onclick="submitAnswer(this.dataset.v)">${esc(o)}</button>`;
     }).join("");
   } else {
@@ -191,7 +191,7 @@ function viewQuiz(){
   }
   if (quiz.answered){
     const ok = norm(quiz.last) === norm(q.answer);
-    h += `<div class="fb ${ok?"ok":"bad"}">${ok ? "✓ Richtig!" : "✗ Falsch."} ${esc(q.explain)} ${sayBtn(q.say)}</div>
+    h += (quiz.mode === "pruef" ? `<div class="muted" style="margin-top:12px">Answer saved.</div>` : `<div class="fb ${ok?"ok":"bad"}">${ok ? "✓ Richtig!" : "✗ Falsch."} ${esc(q.explain)} ${sayBtn(q.say)}</div>`) + `
       <div class="row"><button class="btn" onclick="nextQ()">${quiz.i+1 === quiz.qs.length ? "See result" : "Next →"}</button></div>`;
   }
   h += `</div><div class="row"><button class="btn alt" onclick="quiz=null;render()">✕ Quit</button></div>`;
@@ -225,6 +225,11 @@ function finishQuiz(){
     if (!p.bestTotal || quiz.score / quiz.qs.length >= p.best / p.bestTotal){ p.best = quiz.score; p.bestTotal = quiz.qs.length; }
     if (quiz.passed) S.xp += 20;
   }
+  if (quiz.mode === "pruef"){
+    const p = (S.grammar["p_" + quiz.set] = S.grammar["p_" + quiz.set] || { attempts:0, best:0, bestTotal:0, seen:[] }); p.attempts++;
+    if (!p.bestTotal || quiz.score / quiz.qs.length >= p.best / p.bestTotal){ p.best = quiz.score; p.bestTotal = quiz.qs.length; }
+    if (quiz.passed) S.xp += 30;
+  }
   if (quiz.mode === "mogen"){
     const p = (S.grammar["m_" + quiz.set] = S.grammar["m_" + quiz.set] || { attempts:0, best:0, bestTotal:0, seen:[] }); p.attempts++;
     if (!p.bestTotal || quiz.score / quiz.qs.length >= p.best / p.bestTotal){ p.best = quiz.score; p.bestTotal = quiz.qs.length; }
@@ -238,13 +243,16 @@ function viewResult(){
   if (quiz.mode === "test") msg = quiz.passed
     ? `<div class="fb ok">Bestanden! ✓ ${quiz.day < 30 ? "Day " + (quiz.day+1) + " is unlocked." : "You finished all 30 days! 🎉"}</div>`
     : `<div class="fb bad">Not passed yet (need ${quiz.need}/${total}). Review today's words and try again.</div>`;
+  else if (quiz.mode === "pruef") msg = quiz.passed
+    ? `<div class="fb ok">Bestanden! ✓ ${quiz.score}/${total} correct (pass mark ${quiz.need}). +30 XP</div>`
+    : `<div class="fb bad">Nicht bestanden. You need ${quiz.need}/${total}. Read the explanations below and try again.</div>`;
   else if (quiz.mode === "poss" || quiz.mode === "case" || quiz.mode === "mogen") msg = quiz.passed
     ? `<div class="fb ok">Stark! ✓ You reached the pass mark (${quiz.need}/${total}). +20 XP</div>`
     : `<div class="fb bad">Need ${quiz.need}/${total} to pass. Check the explanations below and try a new set.</div>`;
   else msg = `<div class="muted">Practice only – your day progress is unchanged.</div>`;
   let h = `<div class="glass pad center"><div style="display:flex;justify-content:center">${ring(pct, 150, quiz.score + "/" + total, "correct")}</div>${msg}`;
   if (quiz.wrong.length) h += `<h2>Review these</h2><div style="text-align:left">${quiz.wrong.map(q => `<div style="margin:6px 0">• ${esc(q.explain)}</div>`).join("")}</div>`;
-  h += `<div class="row" style="justify-content:center"><button class="btn" onclick="${quiz.mode === "poss" ? "startPoss(" + quiz.qs.length + ",'" + quiz.set + "')" : quiz.mode === "case" ? "startCase(" + quiz.qs.length + ",'" + quiz.set + "')" : quiz.mode === "mogen" ? "startMogen(" + quiz.qs.length + ",'" + quiz.set + "')" : "startQuiz('" + quiz.mode + "')"}">${quiz.mode === "poss" || quiz.mode === "case" || quiz.mode === "mogen" ? "New random set" : "Try again"}</button>
+  h += `<div class="row" style="justify-content:center"><button class="btn" onclick="${quiz.mode === "poss" ? "startPoss(" + quiz.qs.length + ",'" + quiz.set + "')" : quiz.mode === "case" ? "startCase(" + quiz.qs.length + ",'" + quiz.set + "')" : quiz.mode === "mogen" ? "startMogen(" + quiz.qs.length + ",'" + quiz.set + "')" : quiz.mode === "pruef" ? "startPruef('" + quiz.set + "')" : "startQuiz('" + quiz.mode + "')"}">${quiz.mode === "poss" || quiz.mode === "case" || quiz.mode === "mogen" || quiz.mode === "pruef" ? "New random set" : "Try again"}</button>
     ${quiz.mode === "test" && quiz.passed && quiz.day < 30 ? `<button class="btn alt" onclick="ui.learnIdx=${quiz.day};ui.deck=null;ui.learnMode='list';setTab('learn')">Learn Day ${quiz.day+1} →</button>` : ""}
     <button class="btn alt" onclick="quiz=null;render()">Back</button></div></div>`;
   return h;

@@ -94,6 +94,7 @@ label{display:block;margin:12px 0 6px;font-size:13px;color:var(--muted)}
 .opt:hover:not(:disabled){border-color:var(--accent);transform:translateX(3px)}
 .opt.right{background:var(--okbg);border-color:var(--ok)}
 .opt.wrong{background:var(--badbg);border-color:var(--bad);animation:shake .3s}
+.opt.picked{border-color:var(--accent);border-width:2px}
 @keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 .fb{margin-top:14px;font-size:16px}.fb.ok{color:var(--ok)}.fb.bad{color:var(--bad)}
 .umlauts{display:flex;gap:8px;margin-top:10px}
