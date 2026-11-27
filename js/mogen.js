@@ -138,18 +138,19 @@ function startMogen(n, set){
     if (!need) return;
     const all = MOGEN_Q[k].map((_, i) => i);
     let ids = shuffle(all.filter(i => !g[gk].seen.includes(i))).slice(0, need);              // unseen questions first
-    if (ids.length < need){ ids = ids.concat(shuffle(all.filter(i => !ids.includes(i))).slice(0, need - ids.length)); g[gk].seen = ids.slice(); }   // all seen: new round
+    const again = [];                                                                          // ids already seen in an earlier round
+    if (ids.length < need){ const extra = shuffle(all.filter(i => !ids.includes(i))).slice(0, need - ids.length); again.push(...extra); ids = ids.concat(extra); g[gk].seen = ids.slice(); g[gk].rounds = (g[gk].rounds || 1) + 1; }   // all seen: new round
     else g[gk].seen = g[gk].seen.concat(ids);
-    pick = pick.concat(ids.map(i => [k, i]));
+    pick = pick.concat(ids.map(i => [k, i, again.includes(i)]));
   });
   pick = shuffle(pick);
-  quiz = { mode:"mogen", set, setLabel:MOGEN_SETS[set].label, n, qs:pick.map(([k, i]) => makeMogen(MOGEN_Q[k][i])), i:0, score:0, wrong:[], answered:false, last:null, done:false };
-  render();
+  quiz = { mode:"mogen", set, setLabel:MOGEN_SETS[set].label, n, qs:pick.map(([k, i, old]) => ({ ...makeMogen(MOGEN_Q[k][i]), old })), i:0, score:0, wrong:[], answered:false, last:null, done:false };
+  save(); render();
 }
 function mogenStat(set){
   const p = S.grammar && S.grammar["m_" + set], total = mogenTotal(set);
   const seen = mogenPools(set).reduce((a, k) => a + ((S.grammar && S.grammar["m_" + k] && S.grammar["m_" + k].seen.length) || 0), 0);
-  return `<div class="muted tiny" style="margin-top:4px">${MOGEN_SETS[set].label}: ${p && p.attempts ? `best ${p.best}/${p.bestTotal} · ${p.attempts} ${p.attempts === 1 ? "try" : "tries"}` : "not tried yet"} · seen ${Math.min(seen, total)}/${total}</div>`;
+  return `<div class="muted tiny" style="margin-top:4px">${MOGEN_SETS[set].label}: ${p && p.attempts ? `best ${p.best}/${p.bestTotal} · ${p.attempts} ${p.attempts === 1 ? "try" : "tries"}` : "not tried yet"} · seen ${Math.min(seen, total)}/${total}${roundOf(mogenPools(set).map(k => "m_" + k)) > 1 ? " · round " + roundOf(mogenPools(set).map(k => "m_" + k)) : ""}</div>`;
 }
 
 /* ---------- topic view ---------- */

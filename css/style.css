@@ -159,3 +159,6 @@ label{display:block;margin:12px 0 6px;font-size:13px;color:var(--muted)}
 .hmore{color:var(--muted);font-size:13px;white-space:nowrap;padding:4px 10px;border:1px solid var(--line);border-radius:999px;background:var(--glass2)}
 .hhead:hover .hmore{border-color:var(--accent)}
 .how>.heq{margin-bottom:0}
+
+.seenb{display:inline-block;font-size:12px;letter-spacing:.3px;padding:3px 10px;border-radius:999px;margin:0 0 8px;border:1px solid var(--line);color:var(--accent)}
+.seenb.old{color:var(--muted)}
