@@ -21,6 +21,7 @@ Created by **Manish Kumar** · [LinkedIn](https://www.linkedin.com/in/manish-kum
 - **Nominative vs Accusative** – der → den, ein → einen, with a "How it works" card and 150 practice sentences (definite 90, indefinite 60, or mixed)
 - **mögen & Lebensmittel** – conjugation (mag / magst / mögen / mögt), article or no article, Was or Wen, nicht or kein, word order in statements and questions, gern vs mögen with essen / trinken. 88 hand-written questions in 6 categories plus a mixed set
 - **Prüfung** (inside the Test tab, next to the vocabulary tests) – course-style "richtig oder falsch?" tests: read a sentence, pick the correct version or "Richtig so". a bank of 150 sentences, 15 random ones per test. Sentences you have not seen come first (tracked per sentence, shown as "Seen 45 / 150"), and a new round starts when all are seen. No feedback until the end, pass mark 80 %. First test: mögen & Lebensmittel
+- **Sprechen** (third switch in the Test tab) – speaking practice with the food words. *With a partner*: question cards, one person asks and the other answers, roles swap on every card, sentence frames below. *Solo*: an English task like "Ask: Do you like rice?", tap the German word tiles in the right order, 10 per round, pass mark 80 %
 - **Progress** – XP, levels, streak, badges, per-day results, export/import of your progress
 - **Accounts** – email + password, email verification, password reset by email
 - **Admin view** – registered users and everyone's progress (admin only), CSV export
@@ -53,6 +54,7 @@ js/firebase-config.js   Firebase keys, admin email, Firebase loader
 js/state.js             app state, helpers, quiz logic, XP/streak
 js/auth.js              login, register, password reset, saving progress
 js/mogen.js             88 questions + topic screen: mögen & Lebensmittel (6 categories + mixed)
+js/sprechen.js          Speaking practice: partner cards and solo "build the sentence"
 js/pruefung-mogen.js    Prüfung bank: 150 sentences for mögen (20 by hand + 130 built by rules)
 js/pruefung.js          Prüfung tests (richtig oder falsch) and the Test tab switch Vocabulary | Prüfung
 js/views.js             all screens (Learn, Test, Progress, Admin)

@@ -46,9 +46,10 @@ function viewPruef(){
 
 /* Test tab: two sections, Vocabulary (day tests) and Prüfung (grammar) */
 function viewCheck(){
-  const sec = ui.testSec === "pruef" ? "pruef" : "vocab";
-  return `<div class="glass tabs" style="grid-template-columns:repeat(2,1fr);margin-bottom:12px">
+  const sec = ui.testSec === "pruef" || ui.testSec === "sprech" ? ui.testSec : "vocab";
+  return `<div class="glass tabs" style="grid-template-columns:repeat(3,1fr);margin-bottom:12px">
       <button class="tab ${sec==="vocab"?"on":""}" onclick="ui.testSec='vocab';render()">Vocabulary</button>
-      <button class="tab ${sec==="pruef"?"on":""}" onclick="ui.testSec='pruef';render()">Prüfung</button></div>
-    ${sec === "pruef" ? viewPruef() : viewVocabTest()}`;
+      <button class="tab ${sec==="pruef"?"on":""}" onclick="ui.testSec='pruef';render()">Prüfung</button>
+      <button class="tab ${sec==="sprech"?"on":""}" onclick="ui.testSec='sprech';render()">Sprechen</button></div>
+    ${sec === "pruef" ? viewPruef() : sec === "sprech" ? viewSprechen() : viewVocabTest()}`;
 }
