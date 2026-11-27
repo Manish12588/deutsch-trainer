@@ -177,7 +177,7 @@ function viewQuiz(){
   const q = quiz.qs[quiz.i], title = { test:`Day ${quiz.day} test`, meanings:"Meanings", plurals:"Plurals", review:"Review mix", poss:"Possessives · " + (quiz.setLabel || ""), case:"Cases · " + (quiz.setLabel || ""), mogen:"mögen · " + (quiz.setLabel || ""), pruef:"Prüfung · " + (quiz.setLabel || "") }[quiz.mode];
   let h = `<div class="muted" style="display:flex;justify-content:space-between"><span>${title}</span><span>${quiz.i+1} / ${quiz.qs.length}</span></div>
     <div class="bar"><div style="width:${quiz.i / quiz.qs.length * 100}%"></div></div>
-    <div class="glass q"><div class="big">${q.prompt}</div>${q.hint ? `<div class="muted">${esc(q.hint)}</div>` : ""}`;
+    <div class="glass q">${q.old === undefined ? "" : `<div class="seenb ${q.old ? "old" : ""}">${q.old ? "↻ Seen before" : "● New"}</div>`}<div class="big">${q.prompt}</div>${q.hint ? `<div class="muted">${esc(q.hint)}</div>` : ""}`;
   if (q.type === "choice"){
     h += q.options.map(o => {
       let c = ""; if (quiz.answered) c = quiz.mode === "pruef" ? (quiz.last === o ? "picked" : "") : norm(o) === norm(q.answer) ? "right" : (quiz.last === o ? "wrong" : "");   // Prüfung: no right/wrong until the end
@@ -279,6 +279,7 @@ const POSS_SETS = {
   basic:{ label:"Owner given",  pools:["poss"],        info:"The owner is shown, e.g. (ich) ___ Mutter ist nett." },
   ctx:  { label:"In context",   pools:["ctx"],         info:"Find the owner yourself: Peter hat einen Hund. Das ist ___ Hund." },
   mix:  { label:"Mixed",        pools:["poss","ctx"],  info:"Both sets shuffled together." } };
+const roundOf = keys => Math.max(1, ...keys.map(k => (S.grammar && S.grammar[k] && S.grammar[k].rounds) || 1));
 const possData = k => k === "poss" ? POSS : POSS_CTX;
 const possPoolOf = set => POSS_SETS[set].pools;
 function startPoss(n, set){
@@ -290,18 +291,19 @@ function startPoss(n, set){
     const need = pools.length === 1 ? n : (pi === 0 ? Math.ceil(n / 2) : Math.floor(n / 2));    // Mixed = half from each set
     const all = possData(k).map((_, i) => i);
     let ids = shuffle(all.filter(i => !g[k].seen.includes(i))).slice(0, need);                    // unseen sentences first
-    if (ids.length < need){ ids = ids.concat(shuffle(all.filter(i => !ids.includes(i))).slice(0, need - ids.length)); g[k].seen = ids.slice(); }   // all seen: new round
+    const again = [];                                                                             // ids that were already seen in an earlier round
+    if (ids.length < need){ const extra = shuffle(all.filter(i => !ids.includes(i))).slice(0, need - ids.length); again.push(...extra); ids = ids.concat(extra); g[k].seen = ids.slice(); g[k].rounds = (g[k].rounds || 1) + 1; }   // all seen: new round
     else g[k].seen = g[k].seen.concat(ids);
-    pick = pick.concat(ids.map(i => [k, i]));
+    pick = pick.concat(ids.map(i => [k, i, again.includes(i)]));
   });
   pick = shuffle(pick);
-  quiz = { mode:"poss", set, setLabel:POSS_SETS[set].label, n, qs:pick.map(([k, i]) => makePoss(possData(k)[i], k === "ctx")), i:0, score:0, wrong:[], answered:false, last:null, done:false };
-  render();
+  quiz = { mode:"poss", set, setLabel:POSS_SETS[set].label, n, qs:pick.map(([k, i, old]) => ({ ...makePoss(possData(k)[i], k === "ctx"), old })), i:0, score:0, wrong:[], answered:false, last:null, done:false };
+  save(); render();
 }
 function possStat(set){
   const key = set === "basic" ? "poss" : set, p = S.grammar && S.grammar[key], pools = possPoolOf(set);
   const total = pools.reduce((a, k) => a + possData(k).length, 0), seen = pools.reduce((a, k) => a + ((S.grammar && S.grammar[k] && S.grammar[k].seen.length) || 0), 0);
-  return `<div class="muted tiny" style="margin-top:4px">${POSS_SETS[set].label}: ${p && p.attempts ? `best ${p.best}/${p.bestTotal} · ${p.attempts} ${p.attempts === 1 ? "try" : "tries"}` : "not tried yet"} · seen ${Math.min(seen, total)}/${total}</div>`;
+  return `<div class="muted tiny" style="margin-top:4px">${POSS_SETS[set].label}: ${p && p.attempts ? `best ${p.best}/${p.bestTotal} · ${p.attempts} ${p.attempts === 1 ? "try" : "tries"}` : "not tried yet"} · seen ${Math.min(seen, total)}/${total}${roundOf(pools) > 1 ? " · round " + roundOf(pools) : ""}</div>`;
 }
 const howOpen = () => LSget("gt.how", true);                 // remembered per browser, open on first visit
 function toggleHow(){ LSset("gt.how", !howOpen()); render(); }
@@ -374,18 +376,19 @@ function startCase(n, set){
     const need = pools.length === 1 ? n : (pi === 0 ? Math.ceil(n / 2) : Math.floor(n / 2));
     const all = caseData(k).map((_, i) => i);
     let ids = shuffle(all.filter(i => !g[gk].seen.includes(i))).slice(0, need);
-    if (ids.length < need){ ids = ids.concat(shuffle(all.filter(i => !ids.includes(i))).slice(0, need - ids.length)); g[gk].seen = ids.slice(); }
+    const again = [];
+    if (ids.length < need){ const extra = shuffle(all.filter(i => !ids.includes(i))).slice(0, need - ids.length); again.push(...extra); ids = ids.concat(extra); g[gk].seen = ids.slice(); g[gk].rounds = (g[gk].rounds || 1) + 1; }
     else g[gk].seen = g[gk].seen.concat(ids);
-    pick = pick.concat(ids.map(i => [k, i]));
+    pick = pick.concat(ids.map(i => [k, i, again.includes(i)]));
   });
   pick = shuffle(pick);
-  quiz = { mode:"case", set, setLabel:CASE_SETS[set].label, n, qs:pick.map(([k, i]) => makeCase(caseData(k)[i], k)), i:0, score:0, wrong:[], answered:false, last:null, done:false };
-  render();
+  quiz = { mode:"case", set, setLabel:CASE_SETS[set].label, n, qs:pick.map(([k, i, old]) => ({ ...makeCase(caseData(k)[i], k), old })), i:0, score:0, wrong:[], answered:false, last:null, done:false };
+  save(); render();
 }
 function caseStat(set){
   const key = set === "mix" ? "cmix" : caseKey(set), p = S.grammar && S.grammar[key], pools = CASE_SETS[set].pools;
   const total = pools.reduce((a, k) => a + caseData(k).length, 0), seen = pools.reduce((a, k) => a + ((S.grammar && S.grammar[caseKey(k)] && S.grammar[caseKey(k)].seen.length) || 0), 0);
-  return `<div class="muted tiny" style="margin-top:4px">${CASE_SETS[set].label}: ${p && p.attempts ? `best ${p.best}/${p.bestTotal} · ${p.attempts} ${p.attempts === 1 ? "try" : "tries"}` : "not tried yet"} · seen ${Math.min(seen, total)}/${total}</div>`;
+  return `<div class="muted tiny" style="margin-top:4px">${CASE_SETS[set].label}: ${p && p.attempts ? `best ${p.best}/${p.bestTotal} · ${p.attempts} ${p.attempts === 1 ? "try" : "tries"}` : "not tried yet"} · seen ${Math.min(seen, total)}/${total}${roundOf(pools.map(caseKey)) > 1 ? " · round " + roundOf(pools.map(caseKey)) : ""}</div>`;
 }
 function viewCaseTopic(){
   const n = ui.cq || 10, set = ui.cset || "def", total = CASE_SETS[set].pools.reduce((a, k) => a + caseData(k).length, 0);

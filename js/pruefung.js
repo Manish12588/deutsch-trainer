@@ -19,14 +19,14 @@ function startPruef(id){
   const rec = g[key], valid = new Set(t.bank.map(q => q.id));
   rec.seen = (rec.seen || []).filter(x => valid.has(x));                         // drop ids that no longer exist (or old numbers)
   const n = Math.min(t.n, t.bank.length), unseen = t.bank.filter(q => !rec.seen.includes(q.id));
-  let chosen;
+  let chosen, again = [];
   if (unseen.length >= n){ chosen = shuffle(unseen).slice(0, n); rec.seen = rec.seen.concat(chosen.map(q => q.id)); }
   else {                                                                         // not enough new ones left: new round
     const rest = shuffle(t.bank.filter(q => !unseen.includes(q)));
-    chosen = unseen.concat(rest.slice(0, n - unseen.length)); rec.seen = chosen.map(q => q.id); rec.rounds = (rec.rounds || 1) + 1;
+    again = rest.slice(0, n - unseen.length).map(q => q.id); chosen = unseen.concat(rest.slice(0, n - unseen.length)); rec.seen = chosen.map(q => q.id); rec.rounds = (rec.rounds || 1) + 1;
   }
-  quiz = { mode:"pruef", set:t.id, setLabel:t.title, n, qs:shuffle(chosen).map(q => makeMogen({ ...q, h:PRUEF_HINT })), i:0, score:0, wrong:[], answered:false, last:null, done:false };
-  render();
+  quiz = { mode:"pruef", set:t.id, setLabel:t.title, n, qs:shuffle(chosen).map(q => ({ ...makeMogen({ ...q, h:PRUEF_HINT }), old:again.includes(q.id) })), i:0, score:0, wrong:[], answered:false, last:null, done:false };
+  save(); render();
 }
 function pruefStat(t){
   const p = S.grammar && S.grammar["p_" + t.id], valid = new Set(t.bank.map(q => q.id)), seen = p ? (p.seen || []).filter(x => valid.has(x)).length : 0;

@@ -161,13 +161,13 @@ function spRec(){ const g = (S.grammar = S.grammar || {}); g.s_all = g.s_all || 
 function spStart(){
   const rec = spRec(), valid = new Set(SP_BANK.map(q => q.id));
   rec.seen = (rec.seen || []).filter(x => valid.has(x));
-  const unseen = SP_BANK.filter(q => !rec.seen.includes(q.id)); let chosen;
+  const unseen = SP_BANK.filter(q => !rec.seen.includes(q.id)); let chosen, again = [];
   if (unseen.length >= SP_N) chosen = shuffle(unseen).slice(0, SP_N);
-  else { chosen = unseen.concat(shuffle(SP_BANK.filter(q => !unseen.includes(q))).slice(0, SP_N - unseen.length)); rec.rounds = (rec.rounds || 1) + 1; rec.seen = []; }
-  const qs = shuffle(chosen).map(q => ({ ...q, extra:spExtras(q) }));
+  else { const extra = shuffle(SP_BANK.filter(q => !unseen.includes(q))).slice(0, SP_N - unseen.length); again = extra.map(q => q.id); chosen = unseen.concat(extra); rec.rounds = (rec.rounds || 1) + 1; rec.seen = []; }
+  const qs = shuffle(chosen).map(q => ({ ...q, extra:spExtras(q), old:again.includes(q.id) }));
   ui.spSec = "practice";
   sp = { qs, i:0, score:0, built:[], pool:spTiles(qs[0]), checked:false, ok:false, done:false, wrong:[] };
-  render();
+  save(); render();
 }
 function spQuit(){ sp = null; render(); }
 function spTap(id){
@@ -214,6 +214,7 @@ function viewSpPractice(){
       <div class="row"><button class="btn" onclick="spStart()">New round</button><button class="btn alt" onclick="sp=null;render()">Close</button></div>${spStat()}</div>`;
   const it = sp.qs[sp.i], tile = t => `<button class="opt" style="width:auto;display:inline-block;margin:4px" onclick="spTap(${t.id})">${esc(t.w)}</button>`;
   return `<div class="glass pad"><div class="muted tiny">${sp.i + 1} / ${sp.qs.length} · score ${sp.score}</div>
+      <div class="seenb ${it.old ? "old" : ""}">${it.old ? "↻ Seen before" : "● New"}</div>
       <div class="big" style="margin:10px 0">${esc(it.en)}</div>
       <div style="min-height:52px;border:1px dashed var(--line);border-radius:12px;padding:6px;margin-bottom:8px">${sp.built.map(tile).join("") || '<span class="muted tiny">Tap the words below</span>'}</div>
       <div>${sp.pool.map(tile).join("")}</div>
